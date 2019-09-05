@@ -56,16 +56,23 @@ struct termios* createRawModeSettinsFrom(struct termios* terminalIOMode){
 
 int main(){
   struct termios* original = malloc(sizeof(struct termios));
-  tcgetattr(STDIN_FILENO, original);
-  struct termios* raw = createRawModeSettinsFrom(original);
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, raw);
-  free(raw);
+  if(tcgetattr(STDIN_FILENO, original) != -1){
+    struct termios* raw = createRawModeSettinsFrom(original);
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, raw) != -1){
+      free(raw);
 
-  Editor* editor = createEditor();
-  start(editor);
-  free(editor);
+      Editor* editor = createEditor();
+      start(editor);
+      free(editor);
 
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, original);
+      if(tcsetattr(STDIN_FILENO, TCSAFLUSH, original) == -1)
+        perror("tcsetattr (original)");
+    }else{
+      perror("tcsetattr (raw)");
+    }
+  }else{
+    perror("tcgetattr (original)");
+  }
   free(original);
   return 0;
 }
