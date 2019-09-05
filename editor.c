@@ -21,14 +21,20 @@ Editor* createEditor(){
   return editor;
 }
 
+void resetScreen(){
+  printf("\x1b[2J");   //clear screen
+  printf("\x1b[0;0H"); //move cursor to top-left
+}
+
 void start(Editor* editor){
   editor->state = RUNNING;
+
   while(editor->state == RUNNING){
-    int c = getchar();
-    if(c == EOF || c == 'q')
+    int key = getchar();
+    if(key == EOF || key == 'q')
       editor->state = DONE;
     else
-      printf("%c\r\n", c);
+      printf("%c\r\n", key);
   }
 }
 
@@ -69,12 +75,14 @@ int main(){
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, raw) != -1){
       free(raw);
 
+      resetScreen();
       Editor* editor = createEditor();
       start(editor);
       free(editor);
 
       if(tcsetattr(STDIN_FILENO, TCSAFLUSH, original) == -1)
         perror("tcsetattr (original)");
+      resetScreen();
     }else{
       perror("tcsetattr (raw)");
     }
