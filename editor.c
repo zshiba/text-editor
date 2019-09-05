@@ -24,9 +24,9 @@ void start(Editor* editor){
   }
 }
 
-struct termios* createRawModeTerminalIOSettinsFrom(struct termios* original){
+struct termios* createRawModeSettinsFrom(struct termios* terminalIOMode){
   struct termios* raw = malloc(sizeof(struct termios));
-  memcpy(raw, original, sizeof(struct termios));
+  memcpy(raw, terminalIOMode, sizeof(struct termios));
 
   //(input mode) BRKINT: (for SIGINT)
   //             ICRNL: for CTRL+M
@@ -57,7 +57,7 @@ struct termios* createRawModeTerminalIOSettinsFrom(struct termios* original){
 int main(){
   struct termios* original = malloc(sizeof(struct termios));
   tcgetattr(STDIN_FILENO, original);
-  struct termios* raw = createRawModeTerminalIOSettinsFrom(original);
+  struct termios* raw = createRawModeSettinsFrom(original);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, raw);
   free(raw);
 
