@@ -5,14 +5,14 @@
 #include <termios.h>
 #include <unistd.h>
 
-typedef enum _EditorState{
+typedef enum _State{
   READY,
   RUNNING,
   DONE
-} EditorState;
+} State;
 
 typedef struct _Editor{
-  EditorState state;
+  State state;
 } Editor;
 
 Editor* createEditor(){
