@@ -27,6 +27,11 @@ Editor* createEditor(){
   return editor;
 }
 
+void dispose(Editor* editor){
+  free(editor->buffer);
+  free(editor);
+}
+
 void resetScreen(){
   printf("\x1b[2J"); //clear screen
   printf("\x1b[H"); //move cursor to home (top-left)
@@ -101,7 +106,7 @@ int main(){
 
       Editor* editor = createEditor();
       start(editor);
-      free(editor);
+      dispose(editor);
 
       if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1)
         perror("tcsetattr (original)");
