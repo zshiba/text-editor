@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -13,17 +14,30 @@ typedef enum _State{
 
 typedef struct _Editor{
   State state;
+  unsigned short windowRows;
+  unsigned short windowColumns;
   unsigned int bufferCapacity;
   unsigned int bufferSize;
   char* buffer;
 } Editor;
 
 Editor* createEditor(){
-  Editor* editor = malloc(sizeof(Editor));
-  editor->state = READY;
-  editor->bufferCapacity = 256;
-  editor->bufferSize = 0;
-  editor->buffer = malloc(sizeof(char) * editor->bufferCapacity);
+  Editor* editor = NULL;
+
+  struct winsize ws;
+  if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1){
+    editor = malloc(sizeof(Editor));
+    editor->state = READY;
+
+    editor->windowRows = ws.ws_row;
+    editor->windowColumns = ws.ws_col;
+
+    editor->bufferCapacity = (editor->windowRows * editor->windowColumns);
+    editor->bufferSize = 0;
+    editor->buffer = malloc(sizeof(char) * editor->bufferCapacity);
+  }else{
+    perror("createEditor()");
+  }
   return editor;
 }
 
@@ -105,8 +119,10 @@ int main(){
       free(raw);
 
       Editor* editor = createEditor();
-      start(editor);
-      dispose(editor);
+      if(editor != NULL){
+        start(editor);
+        dispose(editor);
+      }
 
       if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1)
         perror("tcsetattr (original)");
