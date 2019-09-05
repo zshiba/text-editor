@@ -27,6 +27,7 @@ void resetScreen(){
 }
 
 void start(Editor* editor){
+  resetScreen();
   editor->state = RUNNING;
 
   while(editor->state == RUNNING){
@@ -75,7 +76,6 @@ int main(){
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, raw) != -1){
       free(raw);
 
-      resetScreen();
       Editor* editor = createEditor();
       start(editor);
       free(editor);
