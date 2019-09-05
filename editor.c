@@ -13,11 +13,17 @@ typedef enum _State{
 
 typedef struct _Editor{
   State state;
+  unsigned int bufferCapacity;
+  unsigned int bufferSize;
+  char* buffer;
 } Editor;
 
 Editor* createEditor(){
   Editor* editor = malloc(sizeof(Editor));
   editor->state = READY;
+  editor->bufferCapacity = 256;
+  editor->bufferSize = 0;
+  editor->buffer = malloc(sizeof(char) * editor->bufferCapacity);
   return editor;
 }
 
@@ -26,16 +32,33 @@ void resetScreen(){
   printf("\x1b[H"); //move cursor to home (top-left)
 }
 
+void update(Editor* editor, int key){
+  if(key == EOF || key == 'q'){
+    editor->state = DONE;
+  }else{
+    if(editor->bufferSize < editor->bufferCapacity){
+      editor->buffer[editor->bufferSize] = key;
+      ++editor->bufferSize;
+    }else{
+      //ToDo: expand buffer
+    }
+  }
+}
+
+void draw(Editor* editor){
+  resetScreen();
+  for(unsigned int i = 0; i < editor->bufferSize; i++)
+    printf("%c", editor->buffer[i]);
+}
+
 void start(Editor* editor){
   resetScreen();
   editor->state = RUNNING;
 
   while(editor->state == RUNNING){
     int key = getchar();
-    if(key == EOF || key == 'q')
-      editor->state = DONE;
-    else
-      printf("%c\r\n", key);
+    update(editor, key);
+    draw(editor);
   }
 }
 
