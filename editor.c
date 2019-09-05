@@ -22,8 +22,8 @@ Editor* createEditor(){
 }
 
 void resetScreen(){
-  printf("\x1b[2J");   //clear screen
-  printf("\x1b[0;0H"); //move cursor to top-left
+  printf("\x1b[2J"); //clear screen
+  printf("\x1b[H"); //move cursor to home (top-left)
 }
 
 void start(Editor* editor){
