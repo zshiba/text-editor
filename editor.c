@@ -5,20 +5,28 @@
 #include <termios.h>
 #include <unistd.h>
 
+typedef enum _EditorState{
+  READY,
+  RUNNING,
+  DONE
+} EditorState;
+
 typedef struct _Editor{
+  EditorState state;
 } Editor;
 
 Editor* createEditor(){
   Editor* editor = malloc(sizeof(Editor));
+  editor->state = READY;
   return editor;
 }
 
 void start(Editor* editor){
-  bool isDone = false;
-  while(!isDone){
+  editor->state = RUNNING;
+  while(editor->state == RUNNING){
     int c = getchar();
     if(c == EOF || c == 'q')
-      isDone = true;
+      editor->state = DONE;
     else
       printf("%c\r\n", c);
   }
