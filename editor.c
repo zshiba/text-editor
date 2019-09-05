@@ -1,10 +1,14 @@
+#include <stdbool.h>
 #include <stdio.h>
-#include <unistd.h>
 
 int main(){
-  char in;
-  ssize_t bytes = read(STDIN_FILENO, &in, 1);
-  if(bytes != -1)
-    printf("%c\n", in);
+  bool isDone = false;
+  while(!isDone){
+    int c = getchar();
+    if(c != EOF)
+      printf("%c\n", c);
+    else
+      isDone = true;
+  }
   return 0;
 }
