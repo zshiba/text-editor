@@ -10,18 +10,20 @@ Editor* createEditor(){
   return editor;
 }
 
-int main(){
-  Editor* editor = createEditor();
-
+void start(Editor* editor){
   bool isDone = false;
   while(!isDone){
     int c = getchar();
-    if(c != EOF)
-      printf("%c\n", c);
-    else
+    if(c == EOF || c == 'q')
       isDone = true;
+    else
+      printf("%c\n", c);
   }
+}
 
+int main(){
+  Editor* editor = createEditor();
+  start(editor);
   free(editor);
   return 0;
 }
