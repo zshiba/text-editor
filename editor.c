@@ -93,9 +93,9 @@ struct termios* createRawModeSettinsFrom(struct termios* terminalIOMode){
 }
 
 int main(){
-  struct termios* original = malloc(sizeof(struct termios));
-  if(tcgetattr(STDIN_FILENO, original) != -1){
-    struct termios* raw = createRawModeSettinsFrom(original);
+  struct termios original;
+  if(tcgetattr(STDIN_FILENO, &original) != -1){
+    struct termios* raw = createRawModeSettinsFrom(&original);
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, raw) != -1){
       free(raw);
 
@@ -103,7 +103,7 @@ int main(){
       start(editor);
       free(editor);
 
-      if(tcsetattr(STDIN_FILENO, TCSAFLUSH, original) == -1)
+      if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1)
         perror("tcsetattr (original)");
       resetScreen();
     }else{
@@ -112,6 +112,5 @@ int main(){
   }else{
     perror("tcgetattr (original)");
   }
-  free(original);
   return 0;
 }
