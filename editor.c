@@ -59,13 +59,16 @@ void resetScreen(){
 int readKey(){
   int c = getchar();
   switch(c){
+    case '\r':
+      c = NEWLINE;
+      break;
+
     case EOF:
     case ('q' & 0x1f): //CTRL: 0x1f (0001 1111)
       c = QUIT;
       break;
 
-    case '\r':
-      c = NEWLINE;
+    default:
       break;
   }
   return c;
