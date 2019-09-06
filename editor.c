@@ -66,8 +66,8 @@ void update(Editor* editor, int key){
 
 void draw(Editor* editor){
   resetScreen();
-  for(unsigned int i = 0; i < editor->bufferSize; i++)
-    printf("%c", editor->buffer[i]);
+  editor->buffer[editor->bufferSize] = '\0'; //ToDo: ad-hoc
+  printf("%s", editor->buffer);
 }
 
 void start(Editor* editor){
