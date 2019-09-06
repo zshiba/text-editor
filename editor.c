@@ -52,7 +52,7 @@ void resetScreen(){
 }
 
 void update(Editor* editor, int key){
-  if(key == EOF || key == 'q'){
+  if(key == EOF || key == ('q' & 0x1f)){ //CTRL: 0x1f (0001 1111)
     editor->state = DONE;
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
