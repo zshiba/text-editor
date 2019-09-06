@@ -65,6 +65,7 @@ int readKey(){
       c = DELETE;
       break;
 
+    case 10: //LF line feed
     case 13: //CR carriage return
       c = NEWLINE;
       break;
@@ -84,8 +85,9 @@ void update(Editor* editor, int key){
   if(key == QUIT){
     editor->state = DONE;
   }else if(key == DELETE){
-    if(0 < editor->bufferSize)
+    if(0 < editor->bufferSize){
       --editor->bufferSize;
+    }
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
       if(key == NEWLINE){
