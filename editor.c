@@ -7,7 +7,8 @@
 #include <unistd.h>
 
 typedef enum _Key{
-  QUIT = 128,
+  DELETE = 127, //ASCII table value
+  QUIT,
   NEWLINE
 } Key;
 
@@ -59,6 +60,11 @@ void resetScreen(){
 int readKey(){
   int c = getchar();
   switch(c){
+    case 8: //BS backspace
+    case 127: //DEL
+      c = DELETE;
+      break;
+
     case '\r':
       c = NEWLINE;
       break;
@@ -77,6 +83,8 @@ int readKey(){
 void update(Editor* editor, int key){
   if(key == QUIT){
     editor->state = DONE;
+  }else if(key == DELETE){
+    --editor->bufferSize;
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
       if(key == NEWLINE){
