@@ -56,8 +56,15 @@ void update(Editor* editor, int key){
     editor->state = DONE;
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
-      editor->buffer[editor->bufferSize] = key;
-      ++editor->bufferSize;
+      if(key == '\r'){
+        editor->buffer[editor->bufferSize] = '\r';
+        ++editor->bufferSize;
+        editor->buffer[editor->bufferSize] = '\n';
+        ++editor->bufferSize;
+      }else{
+        editor->buffer[editor->bufferSize] = key;
+        ++editor->bufferSize;
+      }
     }else{
       //ToDo: expand buffer
     }
