@@ -65,7 +65,7 @@ int readKey(){
       c = DELETE;
       break;
 
-    case '\r':
+    case 13: //CR carriage return
       c = NEWLINE;
       break;
 
