@@ -6,6 +6,11 @@
 #include <termios.h>
 #include <unistd.h>
 
+typedef enum _Key{
+  QUIT = 128,
+  NEWLINE
+} Key;
+
 typedef enum _State{
   READY,
   RUNNING,
@@ -51,12 +56,27 @@ void resetScreen(){
   printf("\x1b[H"); //move cursor to home (top-left)
 }
 
+int readKey(){
+  int c = getchar();
+  switch(c){
+    case EOF:
+    case ('q' & 0x1f): //CTRL: 0x1f (0001 1111)
+      c = QUIT;
+      break;
+
+    case '\r':
+      c = NEWLINE;
+      break;
+  }
+  return c;
+}
+
 void update(Editor* editor, int key){
-  if(key == EOF || key == ('q' & 0x1f)){ //CTRL: 0x1f (0001 1111)
+  if(key == QUIT){
     editor->state = DONE;
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
-      if(key == '\r'){
+      if(key == NEWLINE){
         editor->buffer[editor->bufferSize] = '\r';
         ++editor->bufferSize;
         editor->buffer[editor->bufferSize] = '\n';
@@ -82,7 +102,7 @@ void start(Editor* editor){
   editor->state = RUNNING;
 
   while(editor->state == RUNNING){
-    int key = getchar();
+    int key = readKey();
     update(editor, key);
     draw(editor);
   }
