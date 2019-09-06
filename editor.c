@@ -8,8 +8,8 @@
 
 typedef enum _Key{
   DELETE = 127, //ASCII table value
-  QUIT,
-  NEWLINE
+  NEWLINE,
+  QUIT
 } Key;
 
 typedef enum _State{
