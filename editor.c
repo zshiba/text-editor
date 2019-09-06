@@ -86,7 +86,10 @@ void update(Editor* editor, int key){
     editor->state = DONE;
   }else if(key == DELETE){
     if(0 < editor->bufferSize){
+      char c = editor->buffer[editor->bufferSize - 1];
       --editor->bufferSize;
+      if(c == '\n' && 0 < editor->bufferSize && editor->buffer[editor->bufferSize - 1] == '\r')
+        --editor->bufferSize;
     }
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
