@@ -26,8 +26,8 @@ typedef struct _Editor{
   State state;
   unsigned short windowRows;
   unsigned short windowColumns;
-  unsigned int cursorX;
-  unsigned int cursorY;
+  unsigned int cursorColumn;
+  unsigned int cursorRow;
   unsigned int bufferCapacity;
   unsigned int bufferSize;
   char* buffer;
@@ -44,8 +44,8 @@ Editor* createEditor(){
     editor->windowRows = ws.ws_row;
     editor->windowColumns = ws.ws_col;
 
-    editor->cursorX = 0;
-    editor->cursorY = 0;
+    editor->cursorColumn = 0;
+    editor->cursorRow = 0;
 
     editor->bufferCapacity = (editor->windowRows * editor->windowColumns);
     editor->bufferSize = 0;
@@ -118,21 +118,21 @@ void update(Editor* editor, int key){
       if(c == '\n' && 0 < editor->bufferSize && editor->buffer[editor->bufferSize - 1] == '\r')
         --editor->bufferSize;
 
-      if(0 < editor->cursorX)
-        --editor->cursorX;
+      if(0 < editor->cursorColumn)
+        --editor->cursorColumn;
     }
   }else if(key == UP){
-    if(0 < editor->cursorY)
-      --editor->cursorY;
+    if(0 < editor->cursorRow)
+      --editor->cursorRow;
   }else if(key == DOWN){
-    if(editor->cursorY < editor->windowRows - 1)
-      ++editor->cursorY;
+    if(editor->cursorRow < editor->windowRows - 1)
+      ++editor->cursorRow;
   }else if(key == RIGHT){
-    if(editor->cursorX < editor->windowColumns - 1)
-      ++editor->cursorX;
+    if(editor->cursorColumn < editor->windowColumns - 1)
+      ++editor->cursorColumn;
   }else if(key == LEFT){
-    if(0 < editor->cursorX)
-      --editor->cursorX;
+    if(0 < editor->cursorColumn)
+      --editor->cursorColumn;
   }else{
     if(editor->bufferSize < editor->bufferCapacity){
       if(key == NEWLINE){
@@ -141,17 +141,17 @@ void update(Editor* editor, int key){
         editor->buffer[editor->bufferSize] = '\n';
         ++editor->bufferSize;
 
-        editor->cursorX = 0;
-        ++editor->cursorY;
+        editor->cursorColumn = 0;
+        ++editor->cursorRow;
       }else{
         editor->buffer[editor->bufferSize] = key;
         ++editor->bufferSize;
 
-        if(editor->cursorX < editor->windowColumns - 1){
-          ++editor->cursorX;
+        if(editor->cursorColumn < editor->windowColumns - 1){
+          ++editor->cursorColumn;
         }else{
-          editor->cursorX = 0;
-          ++editor->cursorY;
+          editor->cursorColumn = 0;
+          ++editor->cursorRow;
         }
       }
     }else{
@@ -164,7 +164,7 @@ void draw(Editor* editor){
   resetScreen();
   editor->buffer[editor->bufferSize] = '\0'; //ToDo: ad-hoc
   printf("%s", editor->buffer);
-  printf("\x1b[%d;%dH", editor->cursorY + 1, editor->cursorX + 1);
+  printf("\x1b[%d;%dH", editor->cursorRow + 1, editor->cursorColumn + 1);
 }
 
 void start(Editor* editor){
