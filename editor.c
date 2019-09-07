@@ -16,6 +16,11 @@ typedef enum _Key{
   QUIT
 } Key;
 
+typedef struct _Window{
+  unsigned short rows;
+  unsigned short columns;
+} Window;
+
 typedef enum _State{
   READY,
   RUNNING,
@@ -24,8 +29,7 @@ typedef enum _State{
 
 typedef struct _Editor{
   State state;
-  unsigned short windowRows;
-  unsigned short windowColumns;
+  Window window;
   unsigned int cursorColumn;
   unsigned int cursorRow;
   unsigned int bufferCapacity;
@@ -41,13 +45,13 @@ Editor* createEditor(){
     editor = malloc(sizeof(Editor));
     editor->state = READY;
 
-    editor->windowRows = ws.ws_row;
-    editor->windowColumns = ws.ws_col;
+    editor->window.rows = ws.ws_row;
+    editor->window.columns = ws.ws_col;
 
     editor->cursorColumn = 0;
     editor->cursorRow = 0;
 
-    editor->bufferCapacity = (editor->windowRows * editor->windowColumns);
+    editor->bufferCapacity = (editor->window.rows * editor->window.columns);
     editor->bufferSize = 0;
     editor->buffer = malloc(sizeof(char) * editor->bufferCapacity);
   }else{
@@ -125,10 +129,10 @@ void update(Editor* editor, int key){
     if(0 < editor->cursorRow)
       --editor->cursorRow;
   }else if(key == DOWN){
-    if(editor->cursorRow < editor->windowRows - 1)
+    if(editor->cursorRow < editor->window.rows - 1)
       ++editor->cursorRow;
   }else if(key == RIGHT){
-    if(editor->cursorColumn < editor->windowColumns - 1)
+    if(editor->cursorColumn < editor->window.columns - 1)
       ++editor->cursorColumn;
   }else if(key == LEFT){
     if(0 < editor->cursorColumn)
@@ -147,7 +151,7 @@ void update(Editor* editor, int key){
         editor->buffer[editor->bufferSize] = key;
         ++editor->bufferSize;
 
-        if(editor->cursorColumn < editor->windowColumns - 1){
+        if(editor->cursorColumn < editor->window.columns - 1){
           ++editor->cursorColumn;
         }else{
           editor->cursorColumn = 0;
