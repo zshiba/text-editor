@@ -16,6 +16,18 @@ typedef enum _Key{
   QUIT
 } Key;
 
+typedef struct _Row{
+  int capacity;
+  int size;
+  char* raw;
+} Row;
+
+typedef struct _Buffer{
+  int capacity;
+  int size;
+  Row** rows;
+} Buffer;
+
 typedef struct _Cursor{
   unsigned int row;
   unsigned int column;
@@ -24,6 +36,7 @@ typedef struct _Cursor{
 typedef struct _Window{
   unsigned short rows;
   unsigned short columns;
+  char* frame;
 } Window;
 
 typedef enum _State{
@@ -36,10 +49,16 @@ typedef struct _Editor{
   State state;
   Window window;
   Cursor cursor;
-  unsigned int bufferCapacity;
-  unsigned int bufferSize;
-  char* buffer;
+  Buffer buffer;
 } Editor;
+
+Row* createEmptyRow(int capacity){
+  Row* row = malloc(sizeof(Row));
+  row->capacity = capacity;
+  row->size = 0;
+  row->raw = malloc(sizeof(char) * row->capacity);
+  return row;
+}
 
 Editor* createEditor(){
   Editor* editor = NULL;
@@ -51,13 +70,17 @@ Editor* createEditor(){
 
     editor->window.rows = ws.ws_row;
     editor->window.columns = ws.ws_col;
+    editor->window.frame = malloc(sizeof(char) * ((editor->window.rows * editor->window.columns) + 1));
+    editor->window.frame[0] = '\0';
 
     editor->cursor.column = 0;
     editor->cursor.row = 0;
 
-    editor->bufferCapacity = (editor->window.rows * editor->window.columns);
-    editor->bufferSize = 0;
-    editor->buffer = malloc(sizeof(char) * editor->bufferCapacity);
+    editor->buffer.capacity = editor->window.rows;
+    editor->buffer.rows = malloc(sizeof(Row*) * editor->buffer.capacity);
+    Row* row = createEmptyRow(editor->window.columns);
+    editor->buffer.rows[0] = row;
+    editor->buffer.size = 1;
   }else{
     perror("createEditor()");
   }
@@ -65,7 +88,12 @@ Editor* createEditor(){
 }
 
 void dispose(Editor* editor){
-  free(editor->buffer);
+  for(int i = 0; i < editor->buffer.size; i++){
+    free(editor->buffer.rows[i]->raw);
+    free(editor->buffer.rows[i]);
+  }
+  free(editor->buffer.rows);
+  free(editor->window.frame);
   free(editor);
 }
 
@@ -73,7 +101,6 @@ void resetScreen(){
   printf("\x1b[2J"); //clear screen
   printf("\x1b[H"); //move cursor to home (top-left)
 }
-
 
 int readKey(){
   int c = getchar();
@@ -116,19 +143,118 @@ int readKey(){
   return c;
 }
 
+void extend(Row* row){
+  row->capacity *= 2; //ad-hoc
+  char* extended = malloc(sizeof(char) * row->capacity);
+  for(int i = 0; i < row->size; i++)
+    extended[i] = row->raw[i];
+  free(row->raw);
+  row->raw = extended;
+}
+
+void add(char character, Row* row, int at){
+  if(row->size >= row->capacity)
+    extend(row);
+
+  for(int i = row->size; i > at; i--)
+    row->raw[i] = row->raw[i - 1];
+  row->raw[at] = character;
+  ++row->size;
+}
+
+void expand(Buffer* buffer){
+  buffer->capacity *= 2; //ad-hoc
+  Row** expanded = malloc(sizeof(Row*) * buffer->capacity);
+  for(int i = 0; i < buffer->size; i++)
+    expanded[i] = buffer->rows[i];
+  free(buffer->rows);
+  buffer->rows = expanded;
+}
+
+void inject(Row* row, Buffer* buffer, int at){
+  if(buffer->size >= buffer->capacity)
+    expand(buffer);
+
+  for(int i = buffer->size; i > at; i--)
+    buffer->rows[i] = buffer->rows[i - 1];
+  buffer->rows[at] = row;
+  ++buffer->size;
+}
+
+Row* partition(Row* row, int pivot){
+  Row* second = createEmptyRow(row->capacity);
+  int size = row->size - pivot;
+  for(int i = 0; i < size; i++){
+    second->raw[i] = row->raw[pivot + i];
+    ++second->size;
+  }
+  row->size = pivot;
+  return second;
+}
+
+void insert(int key, Editor* editor){
+  Row* row = editor->buffer.rows[editor->cursor.row];
+  if(key == NEWLINE){
+    Row* second = partition(row, editor->cursor.column);
+    inject(second, &(editor->buffer), editor->cursor.row + 1);
+
+    //ToDo: move cursor
+    ++editor->cursor.row;
+    editor->cursor.column = 0;
+  }else{
+    add((char)key, row, editor->cursor.column);
+
+    //ToDo: move cursor
+    ++editor->cursor.column;
+  }
+}
+
+void append(Row* one, Row* to){
+  while((to->size + one->size) > to->capacity){
+    extend(to);
+  }
+  for(int i = 0; i < one->size; i++){
+    to->raw[to->size] = one->raw[i];
+    ++to->size;
+  }
+}
+
+void deleteCurrentCharacter(Editor* editor){
+  int r = editor->cursor.row;
+  int c = editor->cursor.column;
+  Row* row = editor->buffer.rows[r];
+  if(c == 0){
+    if(r != 0){
+      Row* previous = editor->buffer.rows[r - 1];
+      int pin = previous->size;
+      append(row, previous);
+
+      Buffer* buffer = &(editor->buffer);
+      for(int i = r; i < buffer->size - 1; i++)
+        buffer->rows[i] = buffer->rows[i + 1];
+      --buffer->size;
+      free(row->raw);
+      free(row);
+
+      //ToDo: move cursor
+      --editor->cursor.row;
+      editor->cursor.column = pin;
+    }
+  }else{
+    for(int i = c; i < row->size - 1; i++)
+      row->raw[i] = row->raw[i + 1];
+    --row->size;
+
+    //ToDo: move cursor
+    --editor->cursor.column;
+  }
+}
+
 void update(Editor* editor, int key){
   if(key == QUIT){
     editor->state = DONE;
   }else if(key == DELETE){
-    if(0 < editor->bufferSize){
-      char c = editor->buffer[editor->bufferSize - 1];
-      --editor->bufferSize;
-      if(c == '\n' && 0 < editor->bufferSize && editor->buffer[editor->bufferSize - 1] == '\r')
-        --editor->bufferSize;
-
-      if(0 < editor->cursor.column)
-        --editor->cursor.column;
-    }
+    deleteCurrentCharacter(editor);
   }else if(key == UP){
     if(0 < editor->cursor.row)
       --editor->cursor.row;
@@ -142,36 +268,27 @@ void update(Editor* editor, int key){
     if(0 < editor->cursor.column)
       --editor->cursor.column;
   }else{
-    if(editor->bufferSize < editor->bufferCapacity){
-      if(key == NEWLINE){
-        editor->buffer[editor->bufferSize] = '\r';
-        ++editor->bufferSize;
-        editor->buffer[editor->bufferSize] = '\n';
-        ++editor->bufferSize;
-
-        editor->cursor.column = 0;
-        ++editor->cursor.row;
-      }else{
-        editor->buffer[editor->bufferSize] = key;
-        ++editor->bufferSize;
-
-        if(editor->cursor.column < editor->window.columns - 1){
-          ++editor->cursor.column;
-        }else{
-          editor->cursor.column = 0;
-          ++editor->cursor.row;
-        }
-      }
-    }else{
-      //ToDo: expand buffer
-    }
+    insert(key, editor);
   }
 }
 
 void draw(Editor* editor){
   resetScreen();
-  editor->buffer[editor->bufferSize] = '\0'; //ToDo: ad-hoc
-  printf("%s", editor->buffer);
+  int f = 0;
+  char* frame = editor->window.frame;
+  for(int r = 0; r < editor->buffer.size; r++){
+    Row* row = editor->buffer.rows[r];
+    for(int c = 0; c < row->size; c++){
+      frame[f] = row->raw[c];
+      ++f;
+    }
+    frame[f] = '\r';
+    ++f;
+    frame[f] = '\n';
+    ++f;
+  }
+  frame[f] = '\0';
+  printf("%s", frame);
   printf("\x1b[%d;%dH", editor->cursor.row + 1, editor->cursor.column + 1);
 }
 
