@@ -277,6 +277,11 @@ void moveCursorRight(Editor* editor){
     ++editor->cursor.column;
 }
 
+void moveCursorLeft(Editor* editor){
+  if(0 < editor->cursor.column)
+    --editor->cursor.column;
+}
+
 void update(Editor* editor, int key){
   switch(key){
     case QUIT:
@@ -295,8 +300,7 @@ void update(Editor* editor, int key){
       moveCursorRight(editor);
       break;
     case LEFT:
-      if(0 < editor->cursor.column)
-        --editor->cursor.column;
+      moveCursorLeft(editor);
       break;
     default:
       insert(key, editor);
