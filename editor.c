@@ -143,6 +143,51 @@ int readKey(){
   return c;
 }
 
+void moveCursorUp(Editor* editor){
+  if(0 < editor->cursor.row){
+    --editor->cursor.row;
+    int r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    if(editor->cursor.column > row->size)
+      editor->cursor.column = row->size;
+  }
+}
+
+void moveCursorDown(Editor* editor){
+  if(editor->cursor.row < editor->buffer.size - 1){
+    ++editor->cursor.row;
+    int r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    if(editor->cursor.column > row->size)
+      editor->cursor.column = row->size;
+  }
+}
+
+void moveCursorRight(Editor* editor){
+  int c = editor->cursor.column;
+  int r = editor->cursor.row;
+  Row* row = editor->buffer.rows[r];
+  if(c < row->size){
+    ++editor->cursor.column;
+  }else if(c == row->size && r < editor->buffer.size - 1){
+    ++editor->cursor.row;
+    editor->cursor.column = 0;
+  }
+}
+
+void moveCursorLeft(Editor* editor){
+  int c = editor->cursor.column;
+  int r = editor->cursor.row;
+  if(0 < c){
+    --editor->cursor.column;
+  }else if(c == 0 && 0 < r){
+    --editor->cursor.row;
+    r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    editor->cursor.column = row->size;
+  }
+}
+
 void extend(Row* row){
   row->capacity *= 2; //ad-hoc
   char* extended = malloc(sizeof(char) * row->capacity);
@@ -204,8 +249,7 @@ void insert(int key, Editor* editor){
   }else{
     add((char)key, row, editor->cursor.column);
 
-    //move cursor right
-    ++editor->cursor.column;
+    moveCursorRight(editor);
   }
 }
 
@@ -245,53 +289,7 @@ void deleteCurrentCharacter(Editor* editor){
       row->raw[i] = row->raw[i + 1];
     --row->size;
 
-    //move cursor left
-    --editor->cursor.column;
-  }
-}
-
-void moveCursorUp(Editor* editor){
-  if(0 < editor->cursor.row){
-    --editor->cursor.row;
-    int r = editor->cursor.row;
-    Row* row = editor->buffer.rows[r];
-    if(editor->cursor.column > row->size)
-      editor->cursor.column = row->size;
-  }
-}
-
-void moveCursorDown(Editor* editor){
-  if(editor->cursor.row < editor->buffer.size - 1){
-    ++editor->cursor.row;
-    int r = editor->cursor.row;
-    Row* row = editor->buffer.rows[r];
-    if(editor->cursor.column > row->size)
-      editor->cursor.column = row->size;
-  }
-}
-
-void moveCursorRight(Editor* editor){
-  int c = editor->cursor.column;
-  int r = editor->cursor.row;
-  Row* row = editor->buffer.rows[r];
-  if(c < row->size){
-    ++editor->cursor.column;
-  }else if(c == row->size && r < editor->buffer.size - 1){
-    ++editor->cursor.row;
-    editor->cursor.column = 0;
-  }
-}
-
-void moveCursorLeft(Editor* editor){
-  int c = editor->cursor.column;
-  int r = editor->cursor.row;
-  if(0 < c){
-    --editor->cursor.column;
-  }else if(c == 0 && 0 < r){
-    --editor->cursor.row;
-    r = editor->cursor.row;
-    Row* row = editor->buffer.rows[r];
-    editor->cursor.column = row->size;
+    moveCursorLeft(editor);
   }
 }
 
