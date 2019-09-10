@@ -283,8 +283,16 @@ void moveCursorRight(Editor* editor){
 }
 
 void moveCursorLeft(Editor* editor){
-  if(0 < editor->cursor.column)
+  int c = editor->cursor.column;
+  int r = editor->cursor.row;
+  if(0 < c){
     --editor->cursor.column;
+  }else if(c == 0 && 0 < r){
+    --editor->cursor.row;
+    r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    editor->cursor.column = row->size;
+  }
 }
 
 void update(Editor* editor, int key){
