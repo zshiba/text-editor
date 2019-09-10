@@ -271,10 +271,15 @@ void moveCursorDown(Editor* editor){
 }
 
 void moveCursorRight(Editor* editor){
+  int c = editor->cursor.column;
   int r = editor->cursor.row;
   Row* row = editor->buffer.rows[r];
-  if(editor->cursor.column < row->size)
+  if(c < row->size){
     ++editor->cursor.column;
+  }else if(c == row->size && r < editor->buffer.size - 1){
+    ++editor->cursor.row;
+    editor->cursor.column = 0;
+  }
 }
 
 void moveCursorLeft(Editor* editor){
