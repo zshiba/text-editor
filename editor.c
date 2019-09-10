@@ -29,8 +29,8 @@ typedef struct _Buffer{
 } Buffer;
 
 typedef struct _Cursor{
-  unsigned int row;
-  unsigned int column;
+  int row;
+  int column;
 } Cursor;
 
 typedef struct _Window{
@@ -250,6 +250,16 @@ void deleteCurrentCharacter(Editor* editor){
   }
 }
 
+void moveCursorUp(Editor* editor){
+  if(0 < editor->cursor.row){
+    --editor->cursor.row;
+    int r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    if(editor->cursor.column > row->size)
+      editor->cursor.column = row->size;
+  }
+}
+
 void update(Editor* editor, int key){
   switch(key){
     case QUIT:
@@ -259,8 +269,7 @@ void update(Editor* editor, int key){
       deleteCurrentCharacter(editor);
       break;
     case UP:
-      if(0 < editor->cursor.row)
-        --editor->cursor.row;
+      moveCursorUp(editor);
       break;
     case DOWN:
       if(editor->cursor.row < editor->window.rows - 1)
