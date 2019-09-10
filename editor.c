@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 typedef enum _Key{
-  DELETE = 127, //ASCII table value
+  DELETE_LEFT = 127, //ASCII table value for DEL
   NEWLINE,
   UP,
   DOWN,
@@ -107,7 +107,7 @@ int readKey(){
   switch(c){
     case 8: //BS backspace
     case 127: //DEL
-      c = DELETE;
+      c = DELETE_LEFT;
       break;
 
     case 10: //LF line feed
@@ -263,7 +263,7 @@ void append(Row* one, Row* to){
   }
 }
 
-void deleteCurrentCharacter(Editor* editor){
+void deleteLeftCharacter(Editor* editor){
   int r = editor->cursor.row;
   int c = editor->cursor.column;
   Row* row = editor->buffer.rows[r];
@@ -298,8 +298,8 @@ void update(Editor* editor, int key){
     case QUIT:
       editor->state = DONE;
       break;
-    case DELETE:
-      deleteCurrentCharacter(editor);
+    case DELETE_LEFT:
+      deleteLeftCharacter(editor);
       break;
     case UP:
       moveCursorUp(editor);
