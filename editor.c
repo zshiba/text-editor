@@ -251,24 +251,32 @@ void deleteCurrentCharacter(Editor* editor){
 }
 
 void update(Editor* editor, int key){
-  if(key == QUIT){
-    editor->state = DONE;
-  }else if(key == DELETE){
-    deleteCurrentCharacter(editor);
-  }else if(key == UP){
-    if(0 < editor->cursor.row)
-      --editor->cursor.row;
-  }else if(key == DOWN){
-    if(editor->cursor.row < editor->window.rows - 1)
-      ++editor->cursor.row;
-  }else if(key == RIGHT){
-    if(editor->cursor.column < editor->window.columns - 1)
-      ++editor->cursor.column;
-  }else if(key == LEFT){
-    if(0 < editor->cursor.column)
-      --editor->cursor.column;
-  }else{
-    insert(key, editor);
+  switch(key){
+    case QUIT:
+      editor->state = DONE;
+      break;
+    case DELETE:
+      deleteCurrentCharacter(editor);
+      break;
+    case UP:
+      if(0 < editor->cursor.row)
+        --editor->cursor.row;
+      break;
+    case DOWN:
+      if(editor->cursor.row < editor->window.rows - 1)
+        ++editor->cursor.row;
+      break;
+    case RIGHT:
+      if(editor->cursor.column < editor->window.columns - 1)
+        ++editor->cursor.column;
+      break;
+    case LEFT:
+      if(0 < editor->cursor.column)
+        --editor->cursor.column;
+      break;
+    default:
+      insert(key, editor);
+      break;
   }
 }
 
