@@ -198,13 +198,13 @@ void insert(int key, Editor* editor){
     Row* second = partition(row, editor->cursor.column);
     inject(second, &(editor->buffer), editor->cursor.row + 1);
 
-    //ToDo: move cursor
+    //move cursor to the beginning of the injected row
     ++editor->cursor.row;
     editor->cursor.column = 0;
   }else{
     add((char)key, row, editor->cursor.column);
 
-    //ToDo: move cursor
+    //move cursor right
     ++editor->cursor.column;
   }
 }
@@ -236,7 +236,7 @@ void deleteCurrentCharacter(Editor* editor){
       free(row->raw);
       free(row);
 
-      //ToDo: move cursor
+      //move cursor to the pinned location
       --editor->cursor.row;
       editor->cursor.column = pin;
     }
@@ -245,7 +245,7 @@ void deleteCurrentCharacter(Editor* editor){
       row->raw[i] = row->raw[i + 1];
     --row->size;
 
-    //ToDo: move cursor
+    //move cursor left
     --editor->cursor.column;
   }
 }
