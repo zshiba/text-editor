@@ -260,6 +260,16 @@ void moveCursorUp(Editor* editor){
   }
 }
 
+void moveCursorDown(Editor* editor){
+  if(editor->cursor.row < editor->buffer.size - 1){
+    ++editor->cursor.row;
+    int r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    if(editor->cursor.column > row->size)
+      editor->cursor.column = row->size;
+  }
+}
+
 void update(Editor* editor, int key){
   switch(key){
     case QUIT:
@@ -272,8 +282,7 @@ void update(Editor* editor, int key){
       moveCursorUp(editor);
       break;
     case DOWN:
-      if(editor->cursor.row < editor->window.rows - 1)
-        ++editor->cursor.row;
+      moveCursorDown(editor);
       break;
     case RIGHT:
       if(editor->cursor.column < editor->window.columns - 1)
