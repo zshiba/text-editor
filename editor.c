@@ -383,7 +383,6 @@ void draw(Editor* editor){
 
 void start(Editor* editor){
   editor->state = RUNNING;
-  resetScreen();
   draw(editor);
 
   while(editor->state == RUNNING){
