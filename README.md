@@ -1,2 +1,2 @@
 # text-editor
-(Work in prograss)
+(Work in progress)
