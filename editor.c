@@ -34,8 +34,8 @@ typedef struct _Cursor{
 } Cursor;
 
 typedef struct _Window{
-  unsigned short rows;
-  unsigned short columns;
+  int rows;
+  int columns;
   char* frame;
 } Window;
 
