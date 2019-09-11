@@ -33,9 +33,15 @@ typedef struct _Cursor{
   int column;
 } Cursor;
 
+typedef struct _LineNumberPane{
+  int offset;
+  char format[4];
+} LineNumberPane;
+
 typedef struct _Window{
   int rows;
   int columns;
+  LineNumberPane lineNumnerPane;
   char* frame;
 } Window;
 
@@ -60,6 +66,31 @@ Row* createEmptyRow(int capacity){
   return row;
 }
 
+void setLineNumberOffsetBy(int bufferSize, LineNumberPane* pane){
+  if(bufferSize == 0){
+    pane->offset = 0;
+    pane->format[0] = '%';
+    pane->format[1] = 'd';
+    pane->format[2] = '\0';
+    pane->format[3] = '\0';
+  }else{
+    int offset = 1;
+    int s = bufferSize;
+    while(s / 10 > 0){
+      ++offset;
+      s /= 10;
+    }
+    if(9 < offset)
+      offset = 9; //ad-hoc
+
+    pane->offset = offset;
+    pane->format[0] = '%';
+    pane->format[1] = '0' + offset;
+    pane->format[2] = 'd';
+    pane->format[3] = '\0';
+  }
+}
+
 Editor* createEditor(){
   Editor* editor = NULL;
 
@@ -81,6 +112,8 @@ Editor* createEditor(){
     Row* row = createEmptyRow(editor->window.columns);
     editor->buffer.rows[0] = row;
     editor->buffer.size = 1;
+
+    setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
   }else{
     perror("createEditor()");
   }
@@ -246,6 +279,8 @@ void insert(int key, Editor* editor){
     //move cursor to the beginning of the injected row
     ++editor->cursor.row;
     editor->cursor.column = 0;
+
+    setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
   }else{
     add((char)key, row, editor->cursor.column);
 
@@ -283,6 +318,8 @@ void deleteLeftCharacter(Editor* editor){
       //move cursor to the pinned location
       --editor->cursor.row;
       editor->cursor.column = pin;
+
+      setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
     }
   }else{
     for(int i = c; i < row->size - 1; i++)
@@ -321,27 +358,33 @@ void update(Editor* editor, int key){
 
 void draw(Editor* editor){
   resetScreen();
-  int f = 0;
+  char offset = editor->window.lineNumnerPane.offset;
+  char* format = editor->window.lineNumnerPane.format;
+  int f = 0; //ToDo: expand frame when needed
   char* frame = editor->window.frame;
   for(int r = 0; r < editor->buffer.size; r++){
+    //line number
+    f += sprintf(frame + f, "\x1b[90m"); //90: dark gray
+    f += sprintf(frame + f, format, r + 1);
+    f += sprintf(frame + f, "\x1b[0m"); //0: reset
+
+    //ToDo: replace this with sprintf (null-terminated required)
     Row* row = editor->buffer.rows[r];
     for(int c = 0; c < row->size; c++){
       frame[f] = row->raw[c];
       ++f;
     }
-    frame[f] = '\r';
-    ++f;
-    frame[f] = '\n';
-    ++f;
+    f += sprintf(frame + f, "\r\n");
   }
   frame[f] = '\0';
   printf("%s", frame);
-  printf("\x1b[%d;%dH", editor->cursor.row + 1, editor->cursor.column + 1);
+  printf("\x1b[%d;%dH", editor->cursor.row + 1, editor->cursor.column + 1 + offset);
 }
 
 void start(Editor* editor){
-  resetScreen();
   editor->state = RUNNING;
+  resetScreen();
+  draw(editor);
 
   while(editor->state == RUNNING){
     int key = readKey();
