@@ -345,7 +345,7 @@ void deleteLeftCharacter(Editor* editor){
       setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
     }
   }else{
-    for(int i = c; i < row->size - 1; i++)
+    for(int i = c - 1; i < row->size; i++)
       row->raw[i] = row->raw[i + 1];
     --row->size;
 
@@ -417,6 +417,9 @@ void draw(Editor* editor){
   frame[f] = '\0';
 
   printf("%s", frame);
+
+//for debug
+//fprintf(stderr, "%s", frame);
 }
 
 void start(Editor* editor){
@@ -427,6 +430,16 @@ void start(Editor* editor){
     int key = readKey();
     update(editor, key);
     draw(editor);
+
+//for debug
+/*
+for(int r = 0; r < editor->buffer.size; r++){
+  Row* row = editor->buffer.rows[r];
+  for(int c = 0; c < row->size; c++)
+    fprintf(stderr, "%c", row->raw[c]);
+  fprintf(stderr, "(c.r:%d, c.c:%d)\n", editor->cursor.row, editor->cursor.column);
+}
+*/
   }
 }
 
