@@ -189,7 +189,7 @@ void scroll(Editor* editor){
   Window* window = &(editor->window);
   Scroll* scroll = &(window->scroll);
 
-  if(cursor->row < scroll->row) //scroll upwrad
+  if(cursor->row < scroll->row) //scroll upward
     scroll->row = cursor->row;
   else if((cursor->row + 1) > scroll->row + window->rows) //scroll downward
     scroll->row = (cursor->row + 1) - window->rows;
