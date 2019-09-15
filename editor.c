@@ -33,6 +33,11 @@ typedef struct _Cursor{
   int column;
 } Cursor;
 
+typedef struct _Scroll{
+  int row;
+  int column;
+} Scroll;
+
 typedef struct _LineNumberPane{
   int offset;
   char format[4];
@@ -42,6 +47,7 @@ typedef struct _Window{
   int rows;
   int columns;
   LineNumberPane lineNumnerPane;
+  Scroll scroll;
   char* frame;
 } Window;
 
@@ -101,6 +107,8 @@ Editor* createEditor(){
 
     editor->window.rows = ws.ws_row;
     editor->window.columns = ws.ws_col;
+    editor->window.scroll.row = 0;
+    editor->window.scroll.column = 0;
     editor->window.frame = malloc(sizeof(char) * ((editor->window.rows * editor->window.columns) + 1));
     editor->window.frame[0] = '\0';
 
@@ -174,6 +182,21 @@ int readKey(){
       break;
   }
   return c;
+}
+
+void scroll(Editor* editor){
+  Cursor* cursor = &(editor->cursor);
+  Window* window = &(editor->window);
+  Scroll* scroll = &(window->scroll);
+
+  if(cursor->row < scroll->row) //scroll upwrad
+    scroll->row = cursor->row;
+  else if((cursor->row + 1) > scroll->row + window->rows) //scroll downward
+    scroll->row = (cursor->row + 1) - window->rows;
+
+  //ToDo: horizontal scroll
+
+//fprintf(stderr, "cursor->row:%d, buffer->size:%d, scroller->row:%d, window->rows:%d\n", cursor->row, editor->buffer.size, scroll->row, window->rows);
 }
 
 void moveCursorUp(Editor* editor){
@@ -354,31 +377,46 @@ void update(Editor* editor, int key){
       insert(key, editor);
       break;
   }
+  scroll(editor);
 }
 
 void draw(Editor* editor){
-  resetScreen();
   char offset = editor->window.lineNumnerPane.offset;
   char* format = editor->window.lineNumnerPane.format;
   int f = 0; //ToDo: expand frame when needed
   char* frame = editor->window.frame;
-  for(int r = 0; r < editor->buffer.size; r++){
-    //line number
-    f += sprintf(frame + f, "\x1b[90m"); //90: dark gray
-    f += sprintf(frame + f, format, r + 1);
-    f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
-    //ToDo: replace this with sprintf (null-terminated required)
-    Row* row = editor->buffer.rows[r];
-    for(int c = 0; c < row->size; c++){
-      frame[f] = row->raw[c];
-      ++f;
+  f += sprintf(frame + f, "\x1b[?25l"); //hide cursor
+  f += sprintf(frame + f, "\x1b[H"); //move cursor to home (top-left)
+
+  for(int wr = 0; wr < editor->window.rows; wr++){
+    int r = wr + editor->window.scroll.row;
+    if(r < editor->buffer.size){
+      //line number
+      f += sprintf(frame + f, "\x1b[90m"); //90: dark gray
+      f += sprintf(frame + f, format, r + 1);
+      f += sprintf(frame + f, "\x1b[0m"); //0: reset
+
+      //ToDo: replace this with sprintf (null-terminated required)
+      Row* row = editor->buffer.rows[r];
+      for(int c = 0; c < row->size; c++){
+        frame[f] = row->raw[c];
+        ++f;
+      }
+      f += sprintf(frame + f, "\x1b[K"); //clear rest of line
+      if(wr < editor->window.rows - 1)
+        f += sprintf(frame + f, "\r\n");
+    }else{
+      f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
+      break;
     }
-    f += sprintf(frame + f, "\r\n");
   }
+
+  f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column + 1 + offset); //move cursor
+  f += sprintf(frame + f, "\x1b[?25h"); //show cursor
   frame[f] = '\0';
+
   printf("%s", frame);
-  printf("\x1b[%d;%dH", editor->cursor.row + 1, editor->cursor.column + 1 + offset);
 }
 
 void start(Editor* editor){
@@ -428,6 +466,7 @@ int main(){
     struct termios* raw = createRawModeSettinsFrom(&original);
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, raw) != -1){
       free(raw);
+      resetScreen();
 
       Editor* editor = createEditor();
       if(editor != NULL){
