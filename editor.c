@@ -194,9 +194,11 @@ void scroll(Editor* editor){
   else if((cursor->row + 1) > scroll->row + window->rows) //scroll downward
     scroll->row = (cursor->row + 1) - window->rows;
 
-  //ToDo: horizontal scroll
-
-//fprintf(stderr, "cursor->row:%d, buffer->size:%d, scroller->row:%d, window->rows:%d\n", cursor->row, editor->buffer.size, scroll->row, window->rows);
+  int offset = window->lineNumnerPane.offset;
+  if(cursor->column < scroll->column) //scroll left
+    scroll->column = cursor->column;
+  else if((cursor->column + 1) > scroll->column + (window->columns - offset)) //scroll right
+    scroll->column = (cursor->column + 1) - (window->columns - offset);
 }
 
 void moveCursorUp(Editor* editor){
@@ -397,13 +399,17 @@ void draw(Editor* editor){
       f += sprintf(frame + f, format, r + 1);
       f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
-      //ToDo: replace this with sprintf (null-terminated required)
       Row* row = editor->buffer.rows[r];
-      for(int c = 0; c < row->size; c++){
-        frame[f] = row->raw[c];
-        ++f;
+      for(int wc = 0; wc < editor->window.columns - offset; wc++){
+        int c = wc + editor->window.scroll.column;
+        if(c < row->size){
+          frame[f] = row->raw[c];
+          ++f;
+        }else{
+          f += sprintf(frame + f, "\x1b[K"); //clear rest of line
+          break;
+        }
       }
-      f += sprintf(frame + f, "\x1b[K"); //clear rest of line
       if(wr < editor->window.rows - 1)
         f += sprintf(frame + f, "\r\n");
     }else{
@@ -412,7 +418,7 @@ void draw(Editor* editor){
     }
   }
 
-  f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column + 1 + offset); //move cursor
+  f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column - editor->window.scroll.column + 1 + offset); //move cursor
   f += sprintf(frame + f, "\x1b[?25h"); //show cursor
   frame[f] = '\0';
 
