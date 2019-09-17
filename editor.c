@@ -43,10 +43,16 @@ typedef struct _LineNumberPane{
   char format[4];
 } LineNumberPane;
 
+typedef struct _StatusPane{
+  int rows;
+  int columns;
+} StatusPane;
+
 typedef struct _Window{
   int rows;
   int columns;
   LineNumberPane lineNumnerPane;
+  StatusPane statusPane;
   Scroll scroll;
   char* frame;
 } Window;
@@ -109,6 +115,8 @@ Editor* createEditor(){
     editor->window.columns = ws.ws_col;
     editor->window.scroll.row = 0;
     editor->window.scroll.column = 0;
+    editor->window.statusPane.rows = 2;
+    editor->window.statusPane.columns = editor->window.columns;
     editor->window.frame = malloc(sizeof(char) * ((editor->window.rows * editor->window.columns) + 1));
     editor->window.frame[0] = '\0';
 
@@ -189,16 +197,17 @@ void scroll(Editor* editor){
   Window* window = &(editor->window);
   Scroll* scroll = &(window->scroll);
 
+  int verticalOffset = window->statusPane.rows;
   if(cursor->row < scroll->row) //scroll upward
     scroll->row = cursor->row;
-  else if((cursor->row + 1) > scroll->row + window->rows) //scroll downward
-    scroll->row = (cursor->row + 1) - window->rows;
+  else if((cursor->row + 1) > scroll->row + (window->rows - verticalOffset)) //scroll downward
+    scroll->row = (cursor->row + 1) - (window->rows - verticalOffset);
 
-  int offset = window->lineNumnerPane.offset;
+  int horizontalOffset = window->lineNumnerPane.offset;
   if(cursor->column < scroll->column) //scroll left
     scroll->column = cursor->column;
-  else if((cursor->column + 1) > scroll->column + (window->columns - offset)) //scroll right
-    scroll->column = (cursor->column + 1) - (window->columns - offset);
+  else if((cursor->column + 1) > scroll->column + (window->columns - horizontalOffset)) //scroll right
+    scroll->column = (cursor->column + 1) - (window->columns - horizontalOffset);
 }
 
 void moveCursorUp(Editor* editor){
@@ -383,24 +392,26 @@ void update(Editor* editor, int key){
 }
 
 void draw(Editor* editor){
-  char offset = editor->window.lineNumnerPane.offset;
+  int horizontalOffset = editor->window.lineNumnerPane.offset;
+  int verticalOffset = editor->window.statusPane.rows;
   char* format = editor->window.lineNumnerPane.format;
+             //ToDo: window needs to hold frame capacity
   int f = 0; //ToDo: expand frame when needed
   char* frame = editor->window.frame;
 
   f += sprintf(frame + f, "\x1b[?25l"); //hide cursor
   f += sprintf(frame + f, "\x1b[H"); //move cursor to home (top-left)
 
-  for(int wr = 0; wr < editor->window.rows; wr++){
+  for(int wr = 0; wr < editor->window.rows - verticalOffset; wr++){
     int r = wr + editor->window.scroll.row;
     if(r < editor->buffer.size){
-      //line number
-      f += sprintf(frame + f, "\x1b[90m"); //90: dark gray
+      //line number pane
+      f += sprintf(frame + f, "\x1b[90m"); //90:bright black (foreground)
       f += sprintf(frame + f, format, r + 1);
       f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
       Row* row = editor->buffer.rows[r];
-      for(int wc = 0; wc < editor->window.columns - offset; wc++){
+      for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
         int c = wc + editor->window.scroll.column;
         if(c < row->size){
           frame[f] = row->raw[c];
@@ -410,15 +421,22 @@ void draw(Editor* editor){
           break;
         }
       }
-      if(wr < editor->window.rows - 1)
-        f += sprintf(frame + f, "\r\n");
     }else{
-      f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
-      break;
+      f += sprintf(frame + f, "\x1b[2K"); //clear line
     }
+    f += sprintf(frame + f, "\r\n");
   }
 
-  f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column - editor->window.scroll.column + 1 + offset); //move cursor
+  //statu pane
+  f += sprintf(frame + f, "\x1b[30;47m"); //30: black (foreground), 47:bright black (background)
+  int offset = sprintf(frame + f, "(%d,%d) ", editor->cursor.row + 1, editor->cursor.column);
+  f += offset;
+  for(int i = 0; i < editor->window.statusPane.columns - offset; i++)
+    f += sprintf(frame + f, "-");
+  f += sprintf(frame + f, "\x1b[0m"); //0: reset
+  f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
+
+  f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column - editor->window.scroll.column + 1 + horizontalOffset); //move cursor
   f += sprintf(frame + f, "\x1b[?25h"); //show cursor
   frame[f] = '\0';
 
