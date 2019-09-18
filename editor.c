@@ -179,7 +179,7 @@ int readKey(){
   const char CTRL = 0x1f; //(0001 1111)
   int c = getchar();
   switch(c){
-    case 8: //BS backspace
+    case 8: //BS backspace or ctrl-h
     case 127: //DEL
       c = DELETE_LEFT;
       break;
@@ -189,19 +189,19 @@ int readKey(){
       c = NEWLINE;
       break;
 
-    case (CTRL & 'f'): //CTRL+f
+    case (CTRL & 'f'): //ctrl-f
       c = RIGHT;
       break;
 
-    case (CTRL & 'b'): //CTRL+b
+    case (CTRL & 'b'): //ctrl-b
       c = LEFT;
       break;
 
-    case (CTRL & 'n'): //CTRL+n
+    case (CTRL & 'n'): //ctrl-n
       c = DOWN;
       break;
 
-    case (CTRL & 'p'): //CTRL+p
+    case (CTRL & 'p'): //ctrl-p
       c = UP;
       break;
 
@@ -223,7 +223,7 @@ int readKey(){
       break;
 
     case EOF:
-    case (CTRL & 'q'): //CTRL+q
+    case (CTRL & 'q'): //ctrl-q
       c = QUIT;
       break;
 
