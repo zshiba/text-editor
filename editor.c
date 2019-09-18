@@ -321,6 +321,17 @@ void moveCursorToLeftmost(Editor* editor){
   editor->cursor.column = 0;
 }
 
+void removeRow(int at, Buffer* buffer){
+  if(0 <= at && at < buffer->size){
+    Row* row = buffer->rows[at];
+    for(int i = at; i < buffer->size - 1; i++)
+      buffer->rows[i] = buffer->rows[i + 1];
+    --buffer->size;
+    free(row->raw);
+    free(row);
+  }
+}
+
 void extend(Row* row){
   row->capacity *= 2; //ad-hoc
   char* extended = malloc(sizeof(char) * row->capacity);
@@ -407,13 +418,7 @@ void deleteLeftCharacter(Editor* editor){
       Row* previous = editor->buffer.rows[r - 1];
       int pin = previous->size;
       append(row, previous);
-
-      Buffer* buffer = &(editor->buffer);
-      for(int i = r; i < buffer->size - 1; i++)
-        buffer->rows[i] = buffer->rows[i + 1];
-      --buffer->size;
-      free(row->raw);
-      free(row);
+      removeRow(r, &(editor->buffer));
 
       //move cursor to the pinned location
       --editor->cursor.row;
@@ -438,13 +443,7 @@ void deleteRightCharacter(Editor* editor){
     if(r != editor->buffer.size - 1){
       Row* next = editor->buffer.rows[r + 1];
       append(next, row);
-
-      Buffer* buffer = &(editor->buffer);
-      for(int i = r + 1; i < buffer->size - 1; i++)
-        buffer->rows[i] = buffer->rows[i + 1];
-      --buffer->size;
-      free(next->raw);
-      free(next);
+      removeRow(r + 1, &(editor->buffer));
 
       setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
     }
