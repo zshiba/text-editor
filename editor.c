@@ -176,6 +176,7 @@ void resetScreen(){
 }
 
 int readKey(){
+  const char CTRL = 0x1f; //(0001 1111)
   int c = getchar();
   switch(c){
     case 8: //BS backspace
@@ -186,6 +187,22 @@ int readKey(){
     case 10: //LF line feed
     case 13: //CR carriage return
       c = NEWLINE;
+      break;
+
+    case (CTRL & 'f'): //CTRL+f
+      c = RIGHT;
+      break;
+
+    case (CTRL & 'b'): //CTRL+b
+      c = LEFT;
+      break;
+
+    case (CTRL & 'n'): //CTRL+n
+      c = DOWN;
+      break;
+
+    case (CTRL & 'p'): //CTRL+p
+      c = UP;
       break;
 
     case '\x1b':
@@ -206,7 +223,7 @@ int readKey(){
       break;
 
     case EOF:
-    case ('q' & 0x1f): //CTRL: 0x1f (0001 1111)
+    case (CTRL & 'q'): //CTRL+q
       c = QUIT;
       break;
 
@@ -468,7 +485,7 @@ void draw(Editor* editor){
   f += sprintf(frame + f, "\x1b[0m"); //0: reset
   f += sprintf(frame + f, "\r\n");
 
-  //mini buffer
+  //message
   f += sprintf(frame + f, "%s", editor->window.statusPane.message);
   f += sprintf(frame + f, "\x1b[K"); //clear rest of line
   //f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
