@@ -8,6 +8,7 @@
 
 typedef enum _Key{
   DELETE_LEFT = 127, //ASCII table value for DEL
+  DELETE_RIGHT,
   NEWLINE,
   UP,
   DOWN,
@@ -184,6 +185,10 @@ int readKey(){
     case 8: //BS backspace or ctrl-h
     case 127: //DEL
       c = DELETE_LEFT;
+      break;
+
+    case (CTRL & 'd'): //ctrl-d
+      c = DELETE_RIGHT;
       break;
 
     case 10: //LF line feed
@@ -425,6 +430,31 @@ void deleteLeftCharacter(Editor* editor){
   }
 }
 
+void deleteRightCharacter(Editor* editor){
+  int r = editor->cursor.row;
+  int c = editor->cursor.column;
+  Row* row = editor->buffer.rows[r];
+  if(c == row->size){
+    if(r != editor->buffer.size - 1){
+      Row* next = editor->buffer.rows[r + 1];
+      append(next, row);
+
+      Buffer* buffer = &(editor->buffer);
+      for(int i = r + 1; i < buffer->size - 1; i++)
+        buffer->rows[i] = buffer->rows[i + 1];
+      --buffer->size;
+      free(next->raw);
+      free(next);
+
+      setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
+    }
+  }else{
+    for(int i = c; i < row->size - 1; i++)
+      row->raw[i] = row->raw[i + 1];
+    --row->size;
+  }
+}
+
 void update(Editor* editor, int key){
   StatusPane* statusPane = &(editor->window.statusPane);
 
@@ -434,7 +464,11 @@ void update(Editor* editor, int key){
       break;
     case DELETE_LEFT:
       deleteLeftCharacter(editor);
-      setMessage("(delete)", statusPane); //ad-hoc for demo
+      setMessage("(delete left)", statusPane); //ad-hoc for demo
+      break;
+    case DELETE_RIGHT:
+      deleteRightCharacter(editor);
+      setMessage("(delete right)", statusPane); //ad-hoc for demo
       break;
     case UP:
       moveCursorUp(editor);
