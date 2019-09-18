@@ -46,6 +46,8 @@ typedef struct _LineNumberPane{
 typedef struct _StatusPane{
   int rows;
   int columns;
+  int capacity;
+  char* message;
 } StatusPane;
 
 typedef struct _Window{
@@ -69,6 +71,24 @@ typedef struct _Editor{
   Cursor cursor;
   Buffer buffer;
 } Editor;
+
+//(message: null-terminated required)
+void setMessage(char* message, StatusPane* statusPane){
+  if(message == NULL){
+    statusPane->message[0] = '\0';
+  }else{
+    int i = 0;
+    while(message[i] != '\0' && i < statusPane->capacity - 1){
+      statusPane->message[i] = message[i];
+      ++i;
+    }
+    statusPane->message[i] = '\0';
+  }
+}
+
+void clearMessage(StatusPane* statusPane){
+  setMessage(NULL, statusPane);
+}
 
 Row* createEmptyRow(int capacity){
   Row* row = malloc(sizeof(Row));
@@ -117,6 +137,9 @@ Editor* createEditor(){
     editor->window.scroll.column = 0;
     editor->window.statusPane.rows = 2;
     editor->window.statusPane.columns = editor->window.columns;
+    editor->window.statusPane.capacity = editor->window.columns;
+    editor->window.statusPane.message = malloc(sizeof(char) * editor->window.statusPane.capacity);
+    clearMessage(&(editor->window.statusPane));
     editor->window.frame = malloc(sizeof(char) * ((editor->window.rows * editor->window.columns) + 1));
     editor->window.frame[0] = '\0';
 
@@ -142,6 +165,7 @@ void dispose(Editor* editor){
     free(editor->buffer.rows[i]);
   }
   free(editor->buffer.rows);
+  free(editor->window.statusPane.message);
   free(editor->window.frame);
   free(editor);
 }
@@ -365,27 +389,35 @@ void deleteLeftCharacter(Editor* editor){
 }
 
 void update(Editor* editor, int key){
+  StatusPane* statusPane = &(editor->window.statusPane);
+
   switch(key){
     case QUIT:
       editor->state = DONE;
       break;
     case DELETE_LEFT:
       deleteLeftCharacter(editor);
+      setMessage("(delete)", statusPane); //ad-hoc for demo
       break;
     case UP:
       moveCursorUp(editor);
+      setMessage("(up)", statusPane); //ad-hoc for demo
       break;
     case DOWN:
       moveCursorDown(editor);
+      setMessage("(down)", statusPane); //ad-hoc for demo
       break;
     case RIGHT:
       moveCursorRight(editor);
+      setMessage("(right)", statusPane); //ad-hoc for demo
       break;
     case LEFT:
       moveCursorLeft(editor);
+      setMessage("(left)", statusPane); //ad-hoc for demo
       break;
     default:
       insert(key, editor);
+      setMessage("(insert)", statusPane); //ad-hoc for demo
       break;
   }
   scroll(editor);
@@ -434,7 +466,12 @@ void draw(Editor* editor){
   for(int i = 0; i < editor->window.statusPane.columns - offset; i++)
     f += sprintf(frame + f, "-");
   f += sprintf(frame + f, "\x1b[0m"); //0: reset
-  f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
+  f += sprintf(frame + f, "\r\n");
+
+  //mini buffer
+  f += sprintf(frame + f, "%s", editor->window.statusPane.message);
+  f += sprintf(frame + f, "\x1b[K"); //clear rest of line
+  //f += sprintf(frame + f, "\x1b[J"); //clear rest of screen
 
   f += sprintf(frame + f, "\x1b[%d;%dH", editor->cursor.row - editor->window.scroll.row + 1, editor->cursor.column - editor->window.scroll.column + 1 + horizontalOffset); //move cursor
   f += sprintf(frame + f, "\x1b[?25h"); //show cursor
