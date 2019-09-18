@@ -13,6 +13,8 @@ typedef enum _Key{
   DOWN,
   RIGHT,
   LEFT,
+  RIGHTMOST,
+  LEFTMOST,
   QUIT
 } Key;
 
@@ -189,6 +191,14 @@ int readKey(){
       c = NEWLINE;
       break;
 
+    case (CTRL & 'e'): //ctrl-e
+      c = RIGHTMOST;
+      break;
+
+    case (CTRL & 'a'): //ctrl-a
+      c = LEFTMOST;
+      break;
+
     case (CTRL & 'f'): //ctrl-f
       c = RIGHT;
       break;
@@ -294,6 +304,16 @@ void moveCursorLeft(Editor* editor){
     Row* row = editor->buffer.rows[r];
     editor->cursor.column = row->size;
   }
+}
+
+void moveCursorToRightmost(Editor* editor){
+  int r = editor->cursor.row;
+  Row* row = editor->buffer.rows[r];
+  editor->cursor.column = row->size;
+}
+
+void moveCursorToLeftmost(Editor* editor){
+  editor->cursor.column = 0;
 }
 
 void extend(Row* row){
@@ -431,6 +451,14 @@ void update(Editor* editor, int key){
     case LEFT:
       moveCursorLeft(editor);
       setMessage("(left)", statusPane); //ad-hoc for demo
+      break;
+    case RIGHTMOST:
+      moveCursorToRightmost(editor);
+      setMessage("(right most)", statusPane); //ad-hoc for demo
+      break;
+    case LEFTMOST:
+      moveCursorToLeftmost(editor);
+      setMessage("(left most)", statusPane); //ad-hoc for demo
       break;
     default:
       insert(key, editor);
