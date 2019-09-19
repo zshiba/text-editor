@@ -520,6 +520,9 @@ void draw(Editor* editor){
       f += sprintf(frame + f, format, r + 1);
       f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
+      if(r == editor->cursor.row)
+        f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
+
       Row* row = editor->buffer.rows[r];
       for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
         int c = wc + editor->window.scroll.column;
@@ -534,6 +537,9 @@ void draw(Editor* editor){
     }else{
       f += sprintf(frame + f, "\x1b[2K"); //clear line
     }
+    if(r == editor->cursor.row)
+      f += sprintf(frame + f, "\x1b[0m");
+
     f += sprintf(frame + f, "\r\n");
   }
 
