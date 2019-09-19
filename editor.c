@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -535,9 +536,17 @@ void draw(Editor* editor){
       for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
         int c = wc + editor->window.scroll.column;
         if(c < row->size){
-          if(row->raw[c] == '\t'){
+          if(row->raw[c] == '\t' || iscntrl(row->raw[c])){
+            char dummy;
+            if(row->raw[c] == '\t')
+              dummy = ' '; //ToDo:ad-hoc, 1 space for now
+            else if(row->raw[c] < 26)
+              dummy = row->raw[c] + '@';
+            else //non-printable
+              dummy = '?';
+
             f += sprintf(frame + f, "\x1b[4m"); //4:underline
-            f += sprintf(frame + f, " "); //ToDo:ad-hoc, 1 space for now
+            f += sprintf(frame + f, "%c", dummy);
             f += sprintf(frame + f, "\x1b[0m"); //0:reset
 
             if(isCurrentRow)
