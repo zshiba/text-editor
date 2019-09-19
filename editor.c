@@ -516,31 +516,46 @@ void draw(Editor* editor){
   for(int wr = 0; wr < editor->window.rows - verticalOffset; wr++){
     int r = wr + editor->window.scroll.row;
     if(r < editor->buffer.size){
+      bool isCurrentRow;
+      if(r == editor->cursor.row)
+        isCurrentRow = true;
+      else
+        isCurrentRow = false;
+
       //line number pane
       f += sprintf(frame + f, "\x1b[90m"); //90:bright black (foreground)
       f += sprintf(frame + f, format, r + 1);
       f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
-      if(r == editor->cursor.row)
+      //highlight current line
+      if(isCurrentRow)
         f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
 
       Row* row = editor->buffer.rows[r];
       for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
         int c = wc + editor->window.scroll.column;
         if(c < row->size){
-          frame[f] = row->raw[c];
-          ++f;
+          if(row->raw[c] == '\t'){
+            f += sprintf(frame + f, "\x1b[4m"); //4:underline
+            f += sprintf(frame + f, " "); //ToDo:ad-hoc, 1 space for now
+            f += sprintf(frame + f, "\x1b[0m"); //0:reset
+
+            if(isCurrentRow)
+              f += sprintf(frame + f, "\x1b[48;5;18m"); //highlight current line
+          }else{
+            frame[f] = row->raw[c];
+            ++f;
+          }
         }else{
           f += sprintf(frame + f, "\x1b[K"); //clear rest of line
           break;
         }
       }
+      if(isCurrentRow)
+        f += sprintf(frame + f, "\x1b[0m"); //end highlight current line
     }else{
       f += sprintf(frame + f, "\x1b[2K"); //clear line
     }
-    if(r == editor->cursor.row)
-      f += sprintf(frame + f, "\x1b[0m");
-
     f += sprintf(frame + f, "\r\n");
   }
 
