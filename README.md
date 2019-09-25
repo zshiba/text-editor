@@ -1,7 +1,7 @@
 # text-editor
 (Work in progress)
 
-## key bindings
+## key bindings (so far)
 |Action|Key|
 |---|---|
 |Quit|Ctrl-q|
@@ -13,3 +13,7 @@
 |Cursor Leftmost|Ctrl-a|
 |Delete Left|Ctrl-h|
 |Delete Right|Ctrl-d|
+|Delete Right Half|Ctrl-k|
+|(TAB)|Ctrl-i|
+|(LF)|Ctrl-j|
+|(CR)|Ctrl-m|
