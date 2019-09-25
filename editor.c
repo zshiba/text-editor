@@ -198,7 +198,7 @@ int readKey(){
       break;
 
     case 10: //LF line feed, \n and ctrl-j
-    case 13: //CR carriage return and \r
+    case 13: //CR carriage return, \r and ctrl-m
       c = NEWLINE;
       break;
 
