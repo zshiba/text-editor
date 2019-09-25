@@ -10,6 +10,7 @@
 typedef enum _Key{
   DELETE_LEFT = 127, //ASCII table value for DEL
   DELETE_RIGHT,
+  DELETE_RIGHT_HALF,
   NEWLINE,
   UP,
   DOWN,
@@ -192,8 +193,12 @@ int readKey(){
       c = DELETE_RIGHT;
       break;
 
-    case 10: //LF line feed
-    case 13: //CR carriage return
+    case 9: //TAB, \t and ctrl-i
+      //ToDo
+      break;
+
+    case 10: //LF line feed, \n and ctrl-j
+    case 13: //CR carriage return and \r
       c = NEWLINE;
       break;
 
@@ -219,6 +224,10 @@ int readKey(){
 
     case (CTRL & 'p'): //ctrl-p
       c = UP;
+      break;
+
+    case (CTRL & 'k'): //ctrl-k
+      c = DELETE_RIGHT_HALF;
       break;
 
     case '\x1b':
@@ -455,6 +464,23 @@ void deleteRightCharacter(Editor* editor){
   }
 }
 
+void deleteRightHalf(Editor* editor){
+  int r = editor->cursor.row;
+  int c = editor->cursor.column;
+  Row* row = editor->buffer.rows[r];
+  if(c == row->size){
+    if(r != editor->buffer.size - 1){
+      Row* next = editor->buffer.rows[r + 1];
+      append(next, row);
+      removeRow(r + 1, &(editor->buffer));
+
+      setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
+    }
+  }else{
+    row->size = c;
+  }
+}
+
 void update(Editor* editor, int key){
   StatusPane* statusPane = &(editor->window.statusPane);
 
@@ -493,6 +519,10 @@ void update(Editor* editor, int key){
     case LEFTMOST:
       moveCursorToLeftmost(editor);
       setMessage("(left most)", statusPane); //ad-hoc for demo
+      break;
+    case DELETE_RIGHT_HALF:
+      deleteRightHalf(editor);
+      setMessage("(delete right half)", statusPane); //ad-hoc for demo
       break;
     default:
       insert(key, editor);
@@ -540,9 +570,7 @@ void draw(Editor* editor){
             char dummy;
             if(row->raw[c] == '\t')
               dummy = ' '; //ToDo:ad-hoc, 1 space for now
-            else if(row->raw[c] < 26)
-              dummy = row->raw[c] + '@';
-            else //non-printable
+            else //ToDo:ad-hoc, non-printable (<= 31)
               dummy = '?';
 
             f += sprintf(frame + f, "\x1b[4m"); //4:underline
