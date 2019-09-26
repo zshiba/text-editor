@@ -25,6 +25,7 @@ typedef struct _Row{
   int capacity;
   int size;
   char* raw;
+  bool isEnabled;
 } Row;
 
 typedef struct _Buffer{
@@ -100,32 +101,25 @@ Row* createEmptyRow(int capacity){
   row->capacity = capacity;
   row->size = 0;
   row->raw = malloc(sizeof(char) * row->capacity);
+  row->isEnabled = false;
   return row;
 }
 
 void setLineNumberOffsetBy(int bufferSize, LineNumberPane* pane){
-  if(bufferSize == 0){
-    pane->offset = 0;
-    pane->format[0] = '%';
-    pane->format[1] = 'd';
-    pane->format[2] = '\0';
-    pane->format[3] = '\0';
-  }else{
-    int offset = 1;
-    int s = bufferSize;
-    while(s / 10 > 0){
-      ++offset;
-      s /= 10;
-    }
-    if(9 < offset)
-      offset = 9; //ad-hoc
-
-    pane->offset = offset;
-    pane->format[0] = '%';
-    pane->format[1] = '0' + offset;
-    pane->format[2] = 'd';
-    pane->format[3] = '\0';
+  int offset = 1;
+  int s = bufferSize;
+  while(s / 10 > 0){
+    ++offset;
+    s /= 10;
   }
+  if(9 < offset)
+    offset = 9; //ad-hoc
+
+  pane->offset = offset;
+  pane->format[0] = '%';
+  pane->format[1] = '0' + offset;
+  pane->format[2] = 'd';
+  pane->format[3] = '\0';
 }
 
 Editor* createEditor(){
@@ -392,9 +386,14 @@ Row* partition(Row* row, int pivot){
 }
 
 void insert(int key, Editor* editor){
-  Row* row = editor->buffer.rows[editor->cursor.row];
+  int r = editor->cursor.row;
+  Row* row = editor->buffer.rows[r];
+  if(!row->isEnabled)
+    row->isEnabled = true;
   if(key == NEWLINE){
     Row* second = partition(row, editor->cursor.column);
+    if(0 < second->size || r < editor->buffer.size - 1)
+      second->isEnabled = true;
     inject(second, &(editor->buffer), editor->cursor.row + 1);
 
     //move cursor to the beginning of the injected row
@@ -430,6 +429,10 @@ void deleteLeftCharacter(Editor* editor){
       append(row, previous);
       removeRow(r, &(editor->buffer));
 
+      //"previouse" became the last row and is empty
+      if(r - 1 == editor->buffer.size - 1 && previous->size == 0)
+        previous->isEnabled = false;
+
       //move cursor to the pinned location
       --editor->cursor.row;
       editor->cursor.column = pin;
@@ -462,6 +465,9 @@ void deleteRightCharacter(Editor* editor){
       row->raw[i] = row->raw[i + 1];
     --row->size;
   }
+  //"row" is the last row and is empty
+  if(r == editor->buffer.size - 1 && row->size == 0)
+    row->isEnabled = false;
 }
 
 void deleteRightHalf(Editor* editor){
@@ -479,6 +485,9 @@ void deleteRightHalf(Editor* editor){
   }else{
     row->size = c;
   }
+  //"row" is the last row and is empty
+  if(r == editor->buffer.size - 1 && row->size == 0)
+    row->isEnabled = false;
 }
 
 void update(Editor* editor, int key){
@@ -547,49 +556,55 @@ void draw(Editor* editor){
   for(int wr = 0; wr < editor->window.rows - verticalOffset; wr++){
     int r = wr + editor->window.scroll.row;
     if(r < editor->buffer.size){
-      bool isCurrentRow;
-      if(r == editor->cursor.row)
-        isCurrentRow = true;
-      else
-        isCurrentRow = false;
-
-      //line number pane
-      f += sprintf(frame + f, "\x1b[90m"); //90:bright black (foreground)
-      f += sprintf(frame + f, format, r + 1);
-      f += sprintf(frame + f, "\x1b[0m"); //0: reset
-
-      //highlight current line
-      if(isCurrentRow)
-        f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
-
       Row* row = editor->buffer.rows[r];
-      for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
-        int c = wc + editor->window.scroll.column;
-        if(c < row->size){
-          if(row->raw[c] == '\t' || iscntrl(row->raw[c])){
-            char dummy;
-            if(row->raw[c] == '\t')
-              dummy = ' '; //ToDo:ad-hoc, 1 space for now
-            else //ToDo:ad-hoc, non-printable (<= 31)
-              dummy = '?';
+      if(row->isEnabled){
+        bool isCurrentRow;
+        if(r == editor->cursor.row)
+          isCurrentRow = true;
+        else
+          isCurrentRow = false;
 
-            f += sprintf(frame + f, "\x1b[4m"); //4:underline
-            f += sprintf(frame + f, "%c", dummy);
-            f += sprintf(frame + f, "\x1b[0m"); //0:reset
+        //line number pane
+        f += sprintf(frame + f, "\x1b[90m"); //90:bright black (foreground)
+        f += sprintf(frame + f, format, r + 1);
+        f += sprintf(frame + f, "\x1b[0m"); //0: reset
 
-            if(isCurrentRow)
-              f += sprintf(frame + f, "\x1b[48;5;18m"); //highlight current line
+        //highlight current line
+        if(isCurrentRow)
+          f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
+
+        for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
+          int c = wc + editor->window.scroll.column;
+          if(c < row->size){
+            if(row->raw[c] == '\t' || iscntrl(row->raw[c])){
+              char dummy;
+              if(row->raw[c] == '\t')
+                dummy = ' '; //ToDo:ad-hoc, 1 space for now
+              else //ToDo:ad-hoc, non-printable (<= 31)
+                dummy = '?';
+
+              f += sprintf(frame + f, "\x1b[4m"); //4:underline
+              f += sprintf(frame + f, "%c", dummy);
+              f += sprintf(frame + f, "\x1b[0m"); //0:reset
+
+              if(isCurrentRow)
+                f += sprintf(frame + f, "\x1b[48;5;18m"); //highlight current line
+            }else{
+              frame[f] = row->raw[c];
+              ++f;
+            }
           }else{
-            frame[f] = row->raw[c];
-            ++f;
+            f += sprintf(frame + f, "\x1b[0K"); //clear rest of line
+            break;
           }
-        }else{
-          f += sprintf(frame + f, "\x1b[K"); //clear rest of line
-          break;
         }
+        if(isCurrentRow)
+          f += sprintf(frame + f, "\x1b[0m"); //end highlight current line
+      }else{ //row is not enabled. Either the buffer is empty or the very last line of the buffer has not been enabled yet.
+        for(int i = 0; i < editor->window.lineNumnerPane.offset; i++) //ad-hoc
+          f += sprintf(frame + f, " "); //for line number part
+        f += sprintf(frame + f, "\x1b[0K"); //clear rest of line
       }
-      if(isCurrentRow)
-        f += sprintf(frame + f, "\x1b[0m"); //end highlight current line
     }else{
       f += sprintf(frame + f, "\x1b[2K"); //clear line
     }
