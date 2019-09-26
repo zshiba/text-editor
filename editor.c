@@ -281,7 +281,11 @@ void moveCursorUp(Editor* editor){
 }
 
 void moveCursorDown(Editor* editor){
-  if(editor->cursor.row < editor->buffer.size - 1){
+  if(editor->cursor.row == editor->buffer.size - 1){
+    int r = editor->cursor.row;
+    Row* row = editor->buffer.rows[r];
+    editor->cursor.column = row->size;
+  }else{
     ++editor->cursor.row;
     int r = editor->cursor.row;
     Row* row = editor->buffer.rows[r];
