@@ -18,8 +18,23 @@ typedef enum _Key{
   LEFT,
   RIGHTMOST,
   LEFTMOST,
+  ACTIVATE_REGION,
+  CANCEL_COMMAND,
   QUIT
 } Key;
+
+typedef struct _Point{
+  int row;
+  int column;
+} Point;
+
+typedef struct _Region{
+  bool isActive;
+  Point mark;
+  Point point;
+  Point* head;
+  Point* tail;
+} Region;
 
 typedef struct _Row{
   int capacity;
@@ -32,6 +47,7 @@ typedef struct _Buffer{
   int capacity;
   int size;
   Row** rows;
+  Region region;
 } Buffer;
 
 typedef struct _Cursor{
@@ -96,6 +112,66 @@ void clearMessage(StatusPane* statusPane){
   setMessage(NULL, statusPane);
 }
 
+void mark(Region* region, int row, int column){
+  region->isActive = true;
+  region->mark.row = row;
+  region->mark.column = column;
+  region->point.row = row;
+  region->point.column = column;
+  region->head = &(region->mark);
+  region->tail = &(region->point);
+}
+
+void activateRegion(Editor* editor){
+  Region* region = &(editor->buffer.region);
+  int r = editor->cursor.row;
+  int c = editor->cursor.column;
+  mark(region, r, c);
+}
+
+void point(Region* region, int row, int column){
+  region->point.row = row;
+  region->point.column = column;
+
+  if(region->point.row < region->mark.row){
+    region->head = &(region->point);
+    region->tail = &(region->mark);
+  }else if(region->mark.row < region->point.row){
+    region->head = &(region->mark);
+    region->tail = &(region->point);
+  }else{ //region->mark.row == region->point.row
+    if(region->point.column < region->mark.column){
+      region->head = &(region->point);
+      region->tail = &(region->mark);
+    }else{
+      region->head = &(region->mark);
+      region->tail = &(region->point);
+    }
+  }
+}
+
+void pointRegion(Editor* editor){
+  Region* region = &(editor->buffer.region);
+  if(region->isActive){
+    int r = editor->cursor.row;
+    int c = editor->cursor.column;
+    point(region, r, c);
+  }
+}
+
+void deactivateRegion(Editor* editor){
+  Region* region = &(editor->buffer.region);
+  if(region->isActive){
+    region->isActive = false;
+    region->mark.row = 0;
+    region->mark.column = 0;
+    region->point.row = 0;
+    region->point.column = 0;
+    region->head = NULL;
+    region->tail = NULL;
+  }
+}
+
 Row* createEmptyRow(int capacity){
   Row* row = malloc(sizeof(Row));
   row->capacity = capacity;
@@ -150,6 +226,7 @@ Editor* createEditor(){
     Row* row = createEmptyRow(editor->window.columns);
     editor->buffer.rows[0] = row;
     editor->buffer.size = 1;
+    deactivateRegion(editor);
 
     setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
   }else{
@@ -239,6 +316,14 @@ int readKey(){
             c = LEFT;
         }
       }
+      break;
+
+    case (CTRL & 'g'): //ctrl-g
+      c = CANCEL_COMMAND;
+      break;
+
+    case (CTRL & ' '): //ctrl-space
+      c = ACTIVATE_REGION;
       break;
 
     case EOF:
@@ -503,42 +588,60 @@ void update(Editor* editor, int key){
       break;
     case DELETE_LEFT:
       deleteLeftCharacter(editor);
+      deactivateRegion(editor);
       setMessage("(delete left)", statusPane); //ad-hoc for demo
       break;
     case DELETE_RIGHT:
       deleteRightCharacter(editor);
+      deactivateRegion(editor);
       setMessage("(delete right)", statusPane); //ad-hoc for demo
       break;
     case UP:
       moveCursorUp(editor);
+      pointRegion(editor);
       setMessage("(up)", statusPane); //ad-hoc for demo
       break;
     case DOWN:
       moveCursorDown(editor);
+      pointRegion(editor);
       setMessage("(down)", statusPane); //ad-hoc for demo
       break;
     case RIGHT:
       moveCursorRight(editor);
+      pointRegion(editor);
       setMessage("(right)", statusPane); //ad-hoc for demo
       break;
     case LEFT:
       moveCursorLeft(editor);
+      pointRegion(editor);
       setMessage("(left)", statusPane); //ad-hoc for demo
       break;
     case RIGHTMOST:
       moveCursorToRightmost(editor);
+      pointRegion(editor);
       setMessage("(right most)", statusPane); //ad-hoc for demo
       break;
     case LEFTMOST:
       moveCursorToLeftmost(editor);
+      pointRegion(editor);
       setMessage("(left most)", statusPane); //ad-hoc for demo
       break;
     case DELETE_RIGHT_HALF:
       deleteRightHalf(editor);
+      deactivateRegion(editor);
       setMessage("(delete right half)", statusPane); //ad-hoc for demo
+      break;
+    case CANCEL_COMMAND:
+      deactivateRegion(editor);
+      setMessage("(cancel)", statusPane); //ad-hoc for demo
+      break;
+    case ACTIVATE_REGION:
+      activateRegion(editor);
+      setMessage("(activate region)", statusPane); //ad-hoc for demo
       break;
     default:
       insert(key, editor);
+      deactivateRegion(editor);
       setMessage("(insert)", statusPane); //ad-hoc for demo
       break;
   }
@@ -549,6 +652,7 @@ void draw(Editor* editor){
   int horizontalOffset = editor->window.lineNumnerPane.offset;
   int verticalOffset = editor->window.statusPane.rows;
   char* format = editor->window.lineNumnerPane.format;
+  Region* region = &(editor->buffer.region);
              //ToDo: use snprintf()
              //ToDo: window needs to hold frame capacity
   int f = 0; //ToDo: expand frame when needed
@@ -556,6 +660,8 @@ void draw(Editor* editor){
 
   f += sprintf(frame + f, "\x1b[?25l"); //hide cursor
   f += sprintf(frame + f, "\x1b[H"); //move cursor to home (top-left)
+
+  bool doneRenderingRegion = !(region->isActive);
 
   for(int wr = 0; wr < editor->window.rows - verticalOffset; wr++){
     int r = wr + editor->window.scroll.row;
@@ -577,8 +683,29 @@ void draw(Editor* editor){
         if(isCurrentRow)
           f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
 
+        bool isRenderingRegion = false;
         for(int wc = 0; wc < editor->window.columns - horizontalOffset; wc++){
           int c = wc + editor->window.scroll.column;
+
+          if(!doneRenderingRegion){
+            if(!isRenderingRegion){
+              if((r == region->head->row && c == region->head->column) || (region->head->row < r && r <= region->tail->row)){
+                isRenderingRegion = true;
+                f += sprintf(frame + f, "\x1b[48;5;66m"); //48:(background), 5:(indexed color), 66:(color code)
+              }
+            }
+            if(isRenderingRegion){
+              if(r == region->tail->row && c == region->tail->column){
+                if(isCurrentRow)
+                  f += sprintf(frame + f, "\x1b[48;5;18m"); //48:(background), 5:(indexed color), 18:(color code)
+                else
+                  f += sprintf(frame + f, "\x1b[0m"); //0:reset
+                isRenderingRegion = false;
+                doneRenderingRegion = true;
+              }
+            }
+          }
+
           if(c < row->size){
             if(row->raw[c] == '\t' || iscntrl(row->raw[c])){
               char dummy;
@@ -602,8 +729,8 @@ void draw(Editor* editor){
             break;
           }
         }
-        if(isCurrentRow)
-          f += sprintf(frame + f, "\x1b[0m"); //end highlight current line
+        isRenderingRegion = false;
+        f += sprintf(frame + f, "\x1b[0m"); //end highlight current line
       }else{ //row is not enabled. Either the buffer is empty or the very last line of the buffer has not been enabled yet.
         for(int i = 0; i < editor->window.lineNumnerPane.offset; i++) //ad-hoc
           f += sprintf(frame + f, " "); //for line number part
