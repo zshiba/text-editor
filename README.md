@@ -15,6 +15,7 @@
 |Delete Right|Ctrl-d|
 |Delete Right Half|Ctrl-k|
 |Activate Region|Ctrl-Space|
+|Copy Region|Alt-w|
 |Cancel Command|Ctrl-g|
 |(TAB)|Ctrl-i|
 |(LF)|Ctrl-j|
