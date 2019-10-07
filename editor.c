@@ -19,6 +19,7 @@ typedef enum _Key{
   RIGHTMOST,
   LEFTMOST,
   ACTIVATE_REGION,
+  COPY_REGION,
   CANCEL_COMMAND,
   QUIT
 } Key;
@@ -49,6 +50,15 @@ typedef struct _Buffer{
   Row** rows;
   Region region;
 } Buffer;
+
+typedef struct _Clip{
+  Row* row;
+  struct _Clip* next;
+} Clip;
+
+typedef struct _Clipboard{
+  Clip* head;
+} Clipboard;
 
 typedef struct _Cursor{
   int row;
@@ -92,6 +102,7 @@ typedef struct _Editor{
   Window window;
   Cursor cursor;
   Buffer buffer;
+  Clipboard clipboard;
 } Editor;
 
 //(message: null-terminated required)
@@ -172,6 +183,18 @@ void deactivateRegion(Editor* editor){
   }
 }
 
+void clearClipboard(Clipboard* clipboard){
+  Clip* current = clipboard->head;
+  while(current != NULL){
+    Clip* clip = current;
+    current = clip->next;
+    free(clip->row->raw);
+    free(clip->row);
+    free(clip);
+  }
+  clipboard->head = NULL;
+}
+
 Row* createEmptyRow(int capacity){
   Row* row = malloc(sizeof(Row));
   row->capacity = capacity;
@@ -226,7 +249,10 @@ Editor* createEditor(){
     Row* row = createEmptyRow(editor->window.columns);
     editor->buffer.rows[0] = row;
     editor->buffer.size = 1;
+
     deactivateRegion(editor);
+
+    editor->clipboard.head = NULL;
 
     setLineNumberOffsetBy(editor->buffer.size, &(editor->window.lineNumnerPane));
   }else{
@@ -236,6 +262,7 @@ Editor* createEditor(){
 }
 
 void dispose(Editor* editor){
+  clearClipboard(&(editor->clipboard));
   for(int i = 0; i < editor->buffer.size; i++){
     free(editor->buffer.rows[i]->raw);
     free(editor->buffer.rows[i]);
@@ -301,7 +328,7 @@ int readKey(){
       c = DELETE_RIGHT_HALF;
       break;
 
-    case '\x1b':
+    case '\x1b': //ESC
       {
         int c2 = getchar();
         if(c2 == '['){
@@ -314,6 +341,8 @@ int readKey(){
             c = RIGHT;
           else if(c3 == 'D')
             c = LEFT;
+        }else if(c2 == 'w'){ //alt-w
+          c = COPY_REGION;
         }
       }
       break;
@@ -334,6 +363,7 @@ int readKey(){
     default:
       break;
   }
+//fprintf(stderr, "%x\n", c);
   return c;
 }
 
@@ -579,6 +609,67 @@ void deleteRightHalf(Editor* editor){
     row->isEnabled = false;
 }
 
+void copyRegion(Editor* editor){
+  Buffer* buffer = &(editor->buffer);
+  Region* region = &(buffer->region);
+  Clipboard* clipboard = &(editor->clipboard);
+  if(region->isActive){
+    clearClipboard(clipboard);
+
+    Clip* current = clipboard->head;
+    Point* head = region->head;
+    Point* tail = region->tail;
+    for(int r = head->row; r <= tail->row; r++){
+      Row* original = buffer->rows[r];
+      int start;
+      int end;
+      if(r == head->row){
+        start = head->column;
+        if(r == tail->row)
+          end = tail->column;
+        else
+          end = original->size;
+      }else if(r == tail->row){
+        start = 0;
+        end = tail->column;
+      }else{
+        start = 0;
+        end = original->size;
+      }
+      Row* copy = createEmptyRow(original->capacity);
+      int i = 0;
+      for(int c = start; c < end; c++){
+        copy->raw[i] = original->raw[c];
+        ++copy->size;
+        ++i;
+      }
+      Clip* clip = malloc(sizeof(Clip));
+      clip->row = copy;
+      clip->next = NULL;
+      if(current == NULL)
+        clipboard->head = clip;
+      else
+        current->next = clip;
+      current = clip;
+    }
+  }
+}
+
+/*
+//for debug
+void dumpClipboard(Clipboard* clipboard){
+  Clip* current = clipboard->head;
+  while(current != NULL){
+    Row* row = current->row;
+    for(int c = 0; c < row->size; c++){
+      fprintf(stderr, "%c", row->raw[c]);
+    }
+    fprintf(stderr, "\r\n");
+    current = current->next;
+  }
+}
+*/
+
 void update(Editor* editor, int key){
   StatusPane* statusPane = &(editor->window.statusPane);
 
@@ -638,6 +729,12 @@ void update(Editor* editor, int key){
     case ACTIVATE_REGION:
       activateRegion(editor);
       setMessage("(activate region)", statusPane); //ad-hoc for demo
+      break;
+    case COPY_REGION:
+      copyRegion(editor);
+      deactivateRegion(editor);
+      setMessage("(copy region)", statusPane); //ad-hoc for demo
+//dumpClipboard(&(editor->clipboard)); //for debug
       break;
     default:
       insert(key, editor);
