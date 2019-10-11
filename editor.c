@@ -20,6 +20,7 @@ typedef enum _Key{
   LEFTMOST,
   ACTIVATE_REGION,
   COPY_REGION,
+  CUT_REGION,
   CANCEL_COMMAND,
   QUIT
 } Key;
@@ -355,6 +356,10 @@ int readKey(){
       c = ACTIVATE_REGION;
       break;
 
+    case (CTRL & 'w'): //ctrl-w
+      c = CUT_REGION;
+      break;
+
     case EOF:
     case (CTRL & 'q'): //ctrl-q
       c = QUIT;
@@ -655,6 +660,56 @@ void copyRegion(Editor* editor){
   }
 }
 
+void deleteRegion(Editor* editor){
+  Buffer* buffer = &(editor->buffer);
+  Region* region = &(buffer->region);
+  Cursor* cursor = &(editor->cursor);
+
+  if(region->isActive){
+    Point* head = region->head;
+    Point* tail = region->tail;
+    if(head->row == tail->row){
+      if(head->column != tail->column){
+        Row* row = buffer->rows[head->row];
+        int start = head->column;
+        int end = tail->column;
+        int n = row->size - end;
+        for(int i = 0; i < n; i++)
+          row->raw[start + i] = row->raw[end + i];
+        row->size -= (end - start);
+      }
+    }else{
+      Row* first = buffer->rows[head->row];
+      Row* last = buffer->rows[tail->row];
+      Row* row = createEmptyRow(first->capacity + last->capacity);
+      for(int i = 0; i < head->column; i++){
+        row->raw[i] = first->raw[i];
+        ++row->size;
+      }
+      for(int i = tail->column; i < last->size; i++){
+        row->raw[row->size] = last->raw[i];
+        ++row->size;
+      }
+      row->isEnabled = true;
+
+      for(int i = head->row; i <= tail->row; i++){
+        Row* r = buffer->rows[i];
+        free(r->raw);
+        free(r);
+      }
+      buffer->rows[head->row] = row;
+
+      int m = buffer->size - (tail->row + 1);
+      for(int i = 0; i < m; i++)
+        buffer->rows[(head->row + 1) + i] = buffer->rows[(tail->row + 1) + i];
+      buffer->size -= (tail->row - head->row);
+    }
+    //move cursor to the begining of the region
+    cursor->row = head->row;
+    cursor->column = head->column;
+  }
+}
+
 /*
 //for debug
 void dumpClipboard(Clipboard* clipboard){
@@ -735,6 +790,12 @@ void update(Editor* editor, int key){
       deactivateRegion(editor);
       setMessage("(copy region)", statusPane); //ad-hoc for demo
 //dumpClipboard(&(editor->clipboard)); //for debug
+      break;
+    case CUT_REGION:
+      copyRegion(editor);
+      deleteRegion(editor);
+      deactivateRegion(editor);
+      setMessage("(cut region)", statusPane); //ad-hoc for demo
       break;
     default:
       insert(key, editor);
