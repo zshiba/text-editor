@@ -726,6 +726,7 @@ void dumpClipboard(Clipboard* clipboard){
 */
 
 void update(Editor* editor, int key){
+  Region* region = &(editor->buffer.region);
   StatusPane* statusPane = &(editor->window.statusPane);
 
   switch(key){
@@ -733,52 +734,70 @@ void update(Editor* editor, int key){
       editor->state = DONE;
       break;
     case DELETE_LEFT:
-      deleteLeftCharacter(editor);
-      deactivateRegion(editor);
-      setMessage("(delete left)", statusPane); //ad-hoc for demo
+      if(region->isActive){
+        deleteRegion(editor);
+        deactivateRegion(editor);
+        setMessage("(delete region)", statusPane); //ad-hoc for demo
+      }else{
+        deleteLeftCharacter(editor);
+        setMessage("(delete left)", statusPane); //ad-hoc for demo
+      }
       break;
     case DELETE_RIGHT:
-      deleteRightCharacter(editor);
-      deactivateRegion(editor);
-      setMessage("(delete right)", statusPane); //ad-hoc for demo
+      if(region->isActive){
+        deleteRegion(editor);
+        deactivateRegion(editor);
+        setMessage("(delete region)", statusPane); //ad-hoc for demo
+      }else{
+        deleteRightCharacter(editor);
+        setMessage("(delete right)", statusPane); //ad-hoc for demo
+      }
       break;
     case UP:
       moveCursorUp(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(up)", statusPane); //ad-hoc for demo
       break;
     case DOWN:
       moveCursorDown(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(down)", statusPane); //ad-hoc for demo
       break;
     case RIGHT:
       moveCursorRight(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(right)", statusPane); //ad-hoc for demo
       break;
     case LEFT:
       moveCursorLeft(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(left)", statusPane); //ad-hoc for demo
       break;
     case RIGHTMOST:
       moveCursorToRightmost(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(right most)", statusPane); //ad-hoc for demo
       break;
     case LEFTMOST:
       moveCursorToLeftmost(editor);
-      pointRegion(editor);
+      if(region->isActive)
+        pointRegion(editor);
       setMessage("(left most)", statusPane); //ad-hoc for demo
       break;
     case DELETE_RIGHT_HALF:
+      if(region->isActive)
+        deactivateRegion(editor);
       deleteRightHalf(editor);
-      deactivateRegion(editor);
       setMessage("(delete right half)", statusPane); //ad-hoc for demo
       break;
     case CANCEL_COMMAND:
-      deactivateRegion(editor);
+      if(region->isActive)
+        deactivateRegion(editor);
       setMessage("(cancel)", statusPane); //ad-hoc for demo
       break;
     case ACTIVATE_REGION:
@@ -786,20 +805,27 @@ void update(Editor* editor, int key){
       setMessage("(activate region)", statusPane); //ad-hoc for demo
       break;
     case COPY_REGION:
-      copyRegion(editor);
-      deactivateRegion(editor);
+      if(region->isActive){
+        copyRegion(editor);
+        deactivateRegion(editor);
+      }
       setMessage("(copy region)", statusPane); //ad-hoc for demo
 //dumpClipboard(&(editor->clipboard)); //for debug
       break;
     case CUT_REGION:
-      copyRegion(editor);
-      deleteRegion(editor);
-      deactivateRegion(editor);
+      if(region->isActive){
+        copyRegion(editor);
+        deleteRegion(editor);
+        deactivateRegion(editor);
+      }
       setMessage("(cut region)", statusPane); //ad-hoc for demo
       break;
     default:
+      if(region->isActive){
+        deleteRegion(editor);
+        deactivateRegion(editor);
+      }
       insert(key, editor);
-      deactivateRegion(editor);
       setMessage("(insert)", statusPane); //ad-hoc for demo
       break;
   }
