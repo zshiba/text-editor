@@ -17,6 +17,7 @@
 |Activate Region|Ctrl-Space|
 |Copy Region|Alt-w|
 |Cut Region|Ctrl-w|
+|Paste|Ctrl-y|
 |Cancel Command|Ctrl-g|
 |(TAB)|Ctrl-i|
 |(LF)|Ctrl-j|
@@ -33,3 +34,8 @@ Terminal.app (Ver. 2.9.5)
 - Keyboard: Option as Meta key
 - Terminfo: xterm-256color
 - Input: VT100 mode
+
+```bash
+$ cc --version
+Apple LLVM version 10.0.1 (clang-1001.0.46.4)
+```
