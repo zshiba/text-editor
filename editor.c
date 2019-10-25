@@ -18,6 +18,8 @@ typedef enum _Key{
   LEFT,
   RIGHTMOST,
   LEFTMOST,
+  UPWARD,
+  DOWNWARD,
   ACTIVATE_REGION,
   COPY_REGION,
   CUT_REGION,
@@ -330,6 +332,10 @@ int readKey(){
       c = DELETE_RIGHT_HALF;
       break;
 
+    case (CTRL & 'v'): //ctrl-v
+      c = DOWNWARD;
+      break;
+
     case '\x1b': //ESC
       {
         int c2 = getchar();
@@ -345,6 +351,8 @@ int readKey(){
             c = LEFT;
         }else if(c2 == 'w'){ //alt-w
           c = COPY_REGION;
+        }else if(c2 == 'v'){ //alt-v
+          c = UPWARD;
         }
       }
       break;
@@ -416,6 +424,29 @@ void moveCursorDown(Editor* editor){
     Row* row = editor->buffer.rows[r];
     if(editor->cursor.column > row->size)
       editor->cursor.column = row->size;
+  }
+}
+
+void moveCursorDownward(Editor* editor){
+  int step = editor->window.rows - editor->window.statusPane.rows - 1;
+  int unseen = (editor->buffer.size - editor->window.scroll.row) - step;
+  if(0 < unseen){
+    if(unseen < step)
+      step = unseen;
+    for(int n = 0; n < step; n++){
+      moveCursorDown(editor);
+      ++(editor->window.scroll.row); //ad-hoc, ToDo: sync with cursor move
+    }
+  }
+}
+
+void moveCursorUpward(Editor* editor){
+  int step = editor->window.rows - editor->window.statusPane.rows - 1;
+  if(editor->window.scroll.row < step)
+    step = editor->window.scroll.row;
+  for(int n = 0; n < step; n++){
+    moveCursorUp(editor);
+    --(editor->window.scroll.row); //ad-hoc, ToDo: sync with cursor move
   }
 }
 
@@ -836,6 +867,20 @@ void update(Editor* editor, int key){
         deactivateRegion(editor);
       deleteRightHalf(editor);
       setMessage("(delete right half)", statusPane); //ad-hoc for demo
+      break;
+
+    case DOWNWARD:
+      moveCursorDownward(editor);
+      if(region->isActive)
+        pointRegion(editor);
+      setMessage("(downward)", statusPane); //ad-hoc for demo
+      break;
+
+    case UPWARD:
+      moveCursorUpward(editor);
+      if(region->isActive)
+        pointRegion(editor);
+      setMessage("(upward)", statusPane); //ad-hoc for demo
       break;
 
     case CANCEL_COMMAND:
