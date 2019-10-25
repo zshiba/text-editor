@@ -11,6 +11,8 @@
 |Cursor Down|Ctrl-n|
 |Cursor Rightmost|Ctrl-e|
 |Cursor Leftmost|Ctrl-a|
+|Cursor Upward|Alt-v|
+|Cursor Downward|Ctrl-v|
 |Delete Left|Ctrl-h|
 |Delete Right|Ctrl-d|
 |Delete Right Half|Ctrl-k|
