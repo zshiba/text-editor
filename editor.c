@@ -20,6 +20,7 @@ typedef enum _Key{
   LEFTMOST,
   UPWARD,
   DOWNWARD,
+  RECENTER,
   ACTIVATE_REGION,
   COPY_REGION,
   CUT_REGION,
@@ -357,6 +358,10 @@ int readKey(){
       }
       break;
 
+    case (CTRL & 'l'):
+      c = RECENTER;
+      break;
+
     case (CTRL & 'g'): //ctrl-g
       c = CANCEL_COMMAND;
       break;
@@ -448,6 +453,17 @@ void moveCursorUpward(Editor* editor){
     moveCursorUp(editor);
     --(editor->window.scroll.row); //ad-hoc, ToDo: sync with cursor move
   }
+}
+
+void recenterCursor(Editor* editor){
+  int middle = (editor->window.rows - editor->window.statusPane.rows) / 2;
+  int current = editor->cursor.row - editor->window.scroll.row;
+
+  int offset = current - middle;
+  if(editor->window.scroll.row + offset >= 0)
+    editor->window.scroll.row += offset;
+  else
+    editor->window.scroll.row = 0;
 }
 
 void moveCursorRight(Editor* editor){
@@ -881,6 +897,11 @@ void update(Editor* editor, int key){
       if(region->isActive)
         pointRegion(editor);
       setMessage("(upward)", statusPane); //ad-hoc for demo
+      break;
+
+    case RECENTER:
+      recenterCursor(editor);
+      setMessage("(recenter)", statusPane); //ad-hoc for demo
       break;
 
     case CANCEL_COMMAND:
