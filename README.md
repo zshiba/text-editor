@@ -13,6 +13,7 @@
 |Cursor Leftmost|Ctrl-a|
 |Cursor Upward|Alt-v|
 |Cursor Downward|Ctrl-v|
+|Cursor Recenter|Ctrl-l|
 |Delete Left|Ctrl-h|
 |Delete Right|Ctrl-d|
 |Delete Right Half|Ctrl-k|
